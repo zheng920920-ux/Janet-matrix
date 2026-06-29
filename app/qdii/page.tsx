@@ -85,11 +85,11 @@ export default function QdiiPage() {
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div className="rounded-xl border border-matrix-line bg-white p-3">
                   <div className="text-xs text-matrix-muted">估算收益</div>
-                  <div className={`mt-1 text-lg font-bold ${toneByValue(estimatedProfit)}`}>{formatMoney(estimatedProfit)}</div>
+                  <div className={`mt-1 text-lg font-bold ${toneByValue(estimatedProfit)}`}>{formatMoney(estimatedProfit, { signed: true })}</div>
                 </div>
                 <div className="rounded-xl border border-matrix-line bg-white p-3">
                   <div className="text-xs text-matrix-muted">确认收益</div>
-                  <div className={`mt-1 text-lg font-bold ${toneByValue(confirmedProfit)}`}>{formatMoney(confirmedProfit)}</div>
+                  <div className={`mt-1 text-lg font-bold ${toneByValue(confirmedProfit)}`}>{formatMoney(confirmedProfit, { signed: true })}</div>
                 </div>
               </div>
               <div className="mt-3">

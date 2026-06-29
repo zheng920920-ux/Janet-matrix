@@ -11,7 +11,6 @@ import {
   Landmark,
   LayoutDashboard,
   LineChart,
-  Search,
   Settings,
   Sparkles,
 } from "lucide-react";
@@ -26,13 +25,11 @@ const navItems = [
 
 const desktopNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/portfolio", label: "Portfolio", icon: Landmark },
-  { href: "/portfolio", label: "Funds", icon: BarChart3, match: "/funds" },
-  { href: "/qdii", label: "QDII", icon: CircleDollarSign },
-  { href: "/stocks", label: "Stocks", icon: LineChart },
-  { href: "#research", label: "Research", icon: Search },
-  { href: "#journal", label: "Journal", icon: BookOpen },
-  { href: "#settings", label: "Settings", icon: Settings },
+  { href: "/funds", label: "Fund", icon: BarChart3 },
+  { href: "/qdii", label: "QDII专区", icon: CircleDollarSign },
+  { href: "/stocks", label: "Stock", icon: LineChart },
+  { href: "/journal", label: "Journal", icon: BookOpen },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -61,7 +58,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
           <nav className="mt-8 space-y-1">
             {desktopNavItems.map((item) => {
               const Icon = item.icon;
-              const active = isDesktopActive(pathname, item.href, item.match);
+              const active = isDesktopActive(pathname, item.href);
               const content = (
                 <span
                   className={cn(
@@ -91,7 +88,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
               <FileClock className="h-4 w-4" strokeWidth={1.8} aria-hidden />
               <span>Mock Data</span>
             </div>
-            <div className="mt-1">V3.0 · Updated 2026-06-29</div>
+            <div className="mt-1">V3.1 · Updated 2026-06-29</div>
           </div>
         </div>
       </aside>

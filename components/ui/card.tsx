@@ -27,8 +27,8 @@ export function StatCard({
 }) {
   const toneClass = {
     neutral: "text-matrix-ink",
-    good: "text-matrix-green",
-    bad: "text-matrix-red",
+    good: "text-matrix-red",
+    bad: "text-matrix-green",
     warn: "text-matrix-amber",
   }[tone];
 

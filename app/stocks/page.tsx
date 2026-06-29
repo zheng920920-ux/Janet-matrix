@@ -23,8 +23,8 @@ export default function StocksPage() {
 
       <div className="grid grid-cols-3 gap-2">
         <StatCard label="股票市值" value={formatMoney(marketValue, { compact: true })} />
-        <StatCard label="今日收益" value={formatMoney(todayProfit, { compact: true })} tone={todayProfit >= 0 ? "good" : "bad"} />
-        <StatCard label="累计收益" value={formatMoney(accumulatedProfit, { compact: true })} tone={accumulatedProfit >= 0 ? "good" : "bad"} />
+        <StatCard label="今日收益" value={formatMoney(todayProfit, { compact: true, signed: true })} tone={todayProfit >= 0 ? "good" : "bad"} />
+        <StatCard label="累计收益" value={formatMoney(accumulatedProfit, { compact: true, signed: true })} tone={accumulatedProfit >= 0 ? "good" : "bad"} />
       </div>
 
       <section className="space-y-3">

@@ -92,8 +92,8 @@ export function CompactFundCard({
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <TinyMetric label="今日" value={formatMoney(metrics.todayEstimatedProfit, { compact: true })} tone={toneByValue(metrics.todayEstimatedProfit)} />
-        <TinyMetric label="累计" value={formatMoney(metrics.accumulatedProfit, { compact: true })} tone={toneByValue(metrics.accumulatedProfit)} />
+        <TinyMetric label="今日" value={formatMoney(metrics.todayEstimatedProfit, { compact: true, signed: true })} tone={toneByValue(metrics.todayEstimatedProfit)} />
+        <TinyMetric label="累计" value={formatMoney(metrics.accumulatedProfit, { compact: true, signed: true })} tone={toneByValue(metrics.accumulatedProfit)} />
         <TinyMetric label="收益率" value={formatPercent(metrics.returnRatePct)} tone={toneByValue(metrics.returnRatePct)} />
       </div>
 
@@ -168,8 +168,8 @@ export function CompactGoldCard({
         </div>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <TinyMetric label="今日" value={formatMoney(metrics.todayProfit, { compact: true })} tone={toneByValue(metrics.todayProfit)} />
-        <TinyMetric label="累计" value={formatMoney(metrics.accumulatedProfit, { compact: true })} tone={toneByValue(metrics.accumulatedProfit)} />
+        <TinyMetric label="今日" value={formatMoney(metrics.todayProfit, { compact: true, signed: true })} tone={toneByValue(metrics.todayProfit)} />
+        <TinyMetric label="累计" value={formatMoney(metrics.accumulatedProfit, { compact: true, signed: true })} tone={toneByValue(metrics.accumulatedProfit)} />
         <TinyMetric label="收益率" value={formatPercent(metrics.returnRatePct)} tone={toneByValue(metrics.returnRatePct)} />
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -202,8 +202,8 @@ export function CompactStockCard({
         </div>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <TinyMetric label="今日" value={formatMoney(metrics.todayProfit, { compact: true })} tone={toneByValue(metrics.todayProfit)} />
-        <TinyMetric label="累计" value={formatMoney(metrics.accumulatedProfit, { compact: true })} tone={toneByValue(metrics.accumulatedProfit)} />
+        <TinyMetric label="今日" value={formatMoney(metrics.todayProfit, { compact: true, signed: true })} tone={toneByValue(metrics.todayProfit)} />
+        <TinyMetric label="累计" value={formatMoney(metrics.accumulatedProfit, { compact: true, signed: true })} tone={toneByValue(metrics.accumulatedProfit)} />
         <TinyMetric label="涨跌" value={formatPercent(metrics.todayChangePct)} tone={toneByValue(metrics.todayChangePct)} />
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">

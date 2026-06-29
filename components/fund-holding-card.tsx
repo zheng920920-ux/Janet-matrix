@@ -20,6 +20,7 @@ export function FundHoldingCard({
 }) {
   const metrics = calculateFundPosition(holding, market, totalAssets);
   const totalFee = market.managementFeePct + market.custodyFeePct + market.salesServiceFeePct;
+  const fundTypeLabel = holding.isQdii ? "美股基金QDII" : holding.theme === "黄金" ? "黄金基金" : "A股基金";
 
   return (
     <Card className="shadow-none">
@@ -30,7 +31,7 @@ export function FundHoldingCard({
             <ArrowRight className="h-4 w-4 text-matrix-muted" aria-hidden />
           </div>
           <p className="mt-1 text-xs text-matrix-muted">
-            {holding.code} · 基金 · {holding.fundCompany}
+            {holding.code} · {holding.account} · {fundTypeLabel} · {holding.fundCompany}
           </p>
         </Link>
         <Badge tone={holding.isQdii ? "blue" : "neutral"}>{holding.theme}</Badge>
@@ -40,13 +41,13 @@ export function FundHoldingCard({
         <div className="rounded-lg bg-matrix-paper p-3">
           <div className="text-xs text-matrix-muted">今日收益</div>
           <div className={`mt-1 text-base font-bold ${toneByValue(metrics.todayEstimatedProfit)}`}>
-            {formatMoney(metrics.todayEstimatedProfit, { compact: true })}
+            {formatMoney(metrics.todayEstimatedProfit, { compact: true, signed: true })}
           </div>
         </div>
         <div className="rounded-lg bg-matrix-paper p-3">
           <div className="text-xs text-matrix-muted">累计收益</div>
           <div className={`mt-1 text-base font-bold ${toneByValue(metrics.accumulatedProfit)}`}>
-            {formatMoney(metrics.accumulatedProfit, { compact: true })}
+            {formatMoney(metrics.accumulatedProfit, { compact: true, signed: true })}
           </div>
         </div>
         <div className="rounded-lg bg-matrix-paper p-3">
@@ -73,6 +74,8 @@ export function FundHoldingCard({
           <MetricRow label="当前估算价值" value={formatMoney(metrics.estimatedValue)} />
           <MetricRow label="持仓份额" value={formatNumber(holding.shares, 2)} />
           <MetricRow label="持仓成本" value={formatMoney(holding.costAmount)} />
+          <MetricRow label="最后加仓" value={holding.lastAddDate} />
+          <MetricRow label="交易规则" value={holding.isQdii ? `T+${market.qdiiDelayDays ?? 2}` : "T+1"} />
           <MetricRow label="基金经理" value={holding.fundManager} />
           <MetricRow label="夏普比率" value={formatNumber(market.sharpeRatio, 2)} />
           <MetricRow label="波动率" value={formatPlainPercent(market.volatilityPct)} />

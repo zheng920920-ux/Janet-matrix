@@ -1,5 +1,7 @@
 export type AssetType = "fund" | "gold" | "stock" | "cash";
 
+export type AccountSource = "支付宝" | "京东" | "其他";
+
 export type FundTheme =
   | "纳指100/QDII"
   | "标普500/QDII"
@@ -55,6 +57,7 @@ export interface FundHolding {
   code: string;
   name: string;
   assetType: "fund";
+  account: AccountSource;
   theme: FundTheme;
   fundType: FundType;
   fundCompany: string;
@@ -64,6 +67,7 @@ export interface FundHolding {
   costAmount: number;
   costNav: number;
   buyDate: string;
+  lastAddDate: string;
   isQdii: boolean;
   riskTags: RiskTag[];
 }
@@ -134,6 +138,7 @@ export interface StockHolding {
   code: string;
   name: string;
   assetType: "stock";
+  account: AccountSource;
   market: "A股" | "港股" | "美股";
   industry: string;
   quantity: number;
@@ -142,6 +147,8 @@ export interface StockHolding {
   previousClose: number;
   currency: "CNY" | "HKD" | "USD";
   fxRateToCny: number;
+  buyDate: string;
+  lastAddDate: string;
   riskTags: RiskTag[];
 }
 
@@ -149,11 +156,14 @@ export interface GoldHolding {
   code: string;
   name: string;
   assetType: "gold";
+  account: AccountSource;
   theme: "黄金";
   grams: number;
   costPricePerGram: number;
   currentPricePerGram: number;
   previousPricePerGram: number;
+  buyDate: string;
+  lastAddDate: string;
   riskTags: RiskTag[];
 }
 
@@ -161,6 +171,7 @@ export interface CashHolding {
   code: string;
   name: string;
   assetType: "cash";
+  account: AccountSource;
   amount: number;
 }
 
@@ -217,13 +228,16 @@ export interface AIRecommendation {
 export interface TransactionLog {
   id: string;
   date: string;
+  account: AccountSource;
   assetType: AssetType;
   code: string;
   name: string;
-  action: "买入" | "卖出" | "定投" | "分红" | "现金转入";
+  action: "买入" | "加仓" | "卖出" | "定投" | "暂停" | "修改收益" | "修改净值" | "备注" | "分红" | "现金转入";
   amount: number;
   shares?: number;
   price?: number;
+  confirmedProfit?: number;
+  estimatedProfit?: number;
   fee?: number;
   note?: string;
 }

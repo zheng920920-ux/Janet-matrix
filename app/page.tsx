@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { CompactCashCard, CompactFundCard, CompactGoldCard, CompactStockCard } from "@/components/compact-position-card";
 import { DesktopPortfolioTable, type PortfolioTableRow } from "@/components/desktop-portfolio-table";
 import { Disclaimer } from "@/components/disclaimer";
@@ -11,9 +14,10 @@ import {
   calculateStockPosition,
   generateAIRecommendations,
   getFundMarketData,
+  getHoldingDays,
 } from "@/lib/calculations";
 import { cashHolding, fundHoldings, goldHoldings, stockHoldings } from "@/lib/mock-data";
-import type { AIRecommendation, PortfolioSummary } from "@/lib/types";
+import type { AccountSource, AIRecommendation, CashHolding, FundHolding, GoldHolding, PortfolioSummary, StockHolding } from "@/lib/types";
 import { cn, formatMoney, formatNumber, formatPercent, toneByValue } from "@/lib/utils";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 } as const;
@@ -68,19 +72,26 @@ function SummaryMetric({
   );
 }
 
+type AccountFilter = "全部" | AccountSource;
+
+const accountFilters: AccountFilter[] = ["全部", "支付宝", "京东"];
+
 function DesktopMetric({
   label,
   value,
   tone,
+  sub,
 }: {
   label: string;
   value: string;
   tone?: string;
+  sub?: string;
 }) {
   return (
     <div className="rounded-xl border border-matrix-line bg-white px-4 py-3">
       <div className="text-xs font-medium text-zinc-500">{label}</div>
       <div className={cn("mt-1 truncate text-lg font-semibold text-zinc-950", tone)}>{value}</div>
+      {sub ? <div className="mt-1 truncate text-[11px] text-zinc-500">{sub}</div> : null}
     </div>
   );
 }
@@ -111,12 +122,25 @@ function RiskDot({ level }: { level: "high" | "medium" | "low" }) {
   );
 }
 
-function buildPortfolioRows(totalAssets: number): PortfolioTableRow[] {
-  const fundRows = fundHoldings.flatMap((holding) => {
+function fundTypeLabel(holding: FundHolding) {
+  if (holding.isQdii) return "美股基金QDII";
+  if (holding.theme === "黄金") return "黄金基金";
+  return "A股基金";
+}
+
+function buildPortfolioRows(
+  totalAssets: number,
+  funds: FundHolding[],
+  gold: GoldHolding[],
+  stocks: StockHolding[],
+  cash: CashHolding,
+): PortfolioTableRow[] {
+  const fundRows = funds.flatMap((holding) => {
     const market = getFundMarketData(holding.code);
     if (!market) return [];
 
     const metrics = calculateFundPosition(holding, market, totalAssets);
+    const todayChangePct = ((metrics.estimatedNav - market.previousConfirmedNav) / market.previousConfirmedNav) * 100;
     const riskTags = new Set<string>(holding.riskTags);
     if (market.fundSizeYi < 10) riskTags.add("规模偏小");
     if (!metrics.isSevenDayMature) riskTags.add("未满7天");
@@ -128,14 +152,18 @@ function buildPortfolioRows(totalAssets: number): PortfolioTableRow[] {
         name: holding.name,
         code: holding.code,
         assetType: "fund" as const,
-        typeLabel: "基金",
+        account: holding.account,
+        typeLabel: fundTypeLabel(holding),
         theme: holding.theme,
         marketValue: metrics.estimatedValue,
         todayEstimatedProfit: metrics.todayEstimatedProfit,
+        todayChangePct,
         todayConfirmedProfit: metrics.todayConfirmedProfit,
         accumulatedProfit: metrics.accumulatedProfit,
         returnRatePct: metrics.returnRatePct,
         weightPct: metrics.weightPct,
+        lastAddDate: holding.lastAddDate,
+        holdingDays: metrics.holdingDays,
         fundSizeYi: market.fundSizeYi,
         riskTags: Array.from(riskTags),
         detailHref: `/funds/${holding.code}`,
@@ -149,7 +177,7 @@ function buildPortfolioRows(totalAssets: number): PortfolioTableRow[] {
     ];
   });
 
-  const goldRows = goldHoldings.map((holding) => {
+  const goldRows = gold.map((holding) => {
     const metrics = calculateGoldPosition(holding, totalAssets);
 
     return {
@@ -157,21 +185,25 @@ function buildPortfolioRows(totalAssets: number): PortfolioTableRow[] {
       name: holding.name,
       code: holding.code,
       assetType: "gold" as const,
-      typeLabel: "黄金",
+      account: holding.account,
+      typeLabel: "黄金积存金",
       theme: holding.theme,
       marketValue: metrics.marketValue,
       todayEstimatedProfit: metrics.todayProfit,
+      todayChangePct: metrics.todayChangePct,
       todayConfirmedProfit: metrics.todayProfit,
       accumulatedProfit: metrics.accumulatedProfit,
       returnRatePct: metrics.returnRatePct,
       weightPct: metrics.weightPct,
+      lastAddDate: holding.lastAddDate,
+      holdingDays: getHoldingDays(holding.buyDate),
       riskTags: holding.riskTags,
       detailHref: "/portfolio",
       note: `${formatNumber(holding.grams, 2)}g · 当前金价 ${formatMoney(holding.currentPricePerGram)}/g`,
     };
   });
 
-  const stockRows = stockHoldings.map((holding) => {
+  const stockRows = stocks.map((holding) => {
     const metrics = calculateStockPosition(holding, totalAssets);
 
     return {
@@ -179,42 +211,49 @@ function buildPortfolioRows(totalAssets: number): PortfolioTableRow[] {
       name: holding.name,
       code: holding.code,
       assetType: "stock" as const,
+      account: holding.account,
       typeLabel: "股票",
       theme: holding.industry,
       marketValue: metrics.marketValueCny,
       todayEstimatedProfit: metrics.todayProfit,
+      todayChangePct: metrics.todayChangePct,
       todayConfirmedProfit: metrics.todayProfit,
       accumulatedProfit: metrics.accumulatedProfit,
       returnRatePct: metrics.returnRatePct,
       weightPct: metrics.weightPct,
+      lastAddDate: holding.lastAddDate,
+      holdingDays: getHoldingDays(holding.buyDate),
       riskTags: holding.riskTags,
       detailHref: "/stocks",
       note: `${holding.market} · 今日涨跌 ${formatPercent(metrics.todayChangePct)}`,
     };
   });
 
-  const cashWeightPct = totalAssets > 0 ? (cashHolding.amount / totalAssets) * 100 : 0;
+  const cashWeightPct = totalAssets > 0 ? (cash.amount / totalAssets) * 100 : 0;
   const cashRows: PortfolioTableRow[] = [
     {
-      id: `cash-${cashHolding.code}`,
-      name: cashHolding.name,
-      code: cashHolding.code,
+      id: `cash-${cash.code}`,
+      name: cash.name,
+      code: cash.code,
       assetType: "cash",
+      account: cash.account,
       typeLabel: "现金",
       theme: "现金",
-      marketValue: cashHolding.amount,
+      marketValue: cash.amount,
       todayEstimatedProfit: 0,
+      todayChangePct: 0,
       todayConfirmedProfit: 0,
       accumulatedProfit: 0,
       returnRatePct: 0,
       weightPct: cashWeightPct,
+      lastAddDate: "-",
       riskTags: cashWeightPct < 10 ? ["现金略低"] : ["备用资金"],
       detailHref: "/portfolio",
       note: "备用资金 / 机会仓位",
     },
   ];
 
-  return [...fundRows, ...goldRows, ...stockRows, ...cashRows];
+  return [...fundRows, ...goldRows, ...stockRows, ...cashRows].filter((row) => row.marketValue > 0 || row.assetType === "cash");
 }
 
 function MobileHome({
@@ -249,23 +288,23 @@ function MobileHome({
               {formatMoney(summary.totalAssets)}
             </h1>
           </div>
-          <Badge tone={summary.todayEstimatedProfit >= 0 ? "good" : "bad"}>V3.0</Badge>
+          <Badge tone={summary.todayEstimatedProfit >= 0 ? "good" : "bad"}>V3.1</Badge>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
           <SummaryMetric
             label="今日估算"
-            value={formatMoney(summary.todayEstimatedProfit, { compact: true })}
+            value={formatMoney(summary.todayEstimatedProfit, { compact: true, signed: true })}
             tone={toneByValue(summary.todayEstimatedProfit)}
           />
           <SummaryMetric
             label="今日确认"
-            value={formatMoney(summary.todayConfirmedProfit, { compact: true })}
+            value={formatMoney(summary.todayConfirmedProfit, { compact: true, signed: true })}
             tone={toneByValue(summary.todayConfirmedProfit)}
           />
           <SummaryMetric
             label="累计收益"
-            value={formatMoney(summary.accumulatedProfit, { compact: true })}
+            value={formatMoney(summary.accumulatedProfit, { compact: true, signed: true })}
             tone={toneByValue(summary.accumulatedProfit)}
           />
           <SummaryMetric
@@ -368,10 +407,20 @@ function DesktopHome({
   summary,
   recommendations,
   rows,
+  accountFilter,
+  onAccountFilterChange,
+  accountSummaries,
 }: {
   summary: PortfolioSummary;
   recommendations: AIRecommendation[];
   rows: PortfolioTableRow[];
+  accountFilter: AccountFilter;
+  onAccountFilterChange: (account: AccountFilter) => void;
+  accountSummaries: Array<{
+    account: AccountSource;
+    todayEstimatedProfit: number;
+    accumulatedProfit: number;
+  }>;
 }) {
   const themeOptions = Array.from(new Set(rows.map((row) => row.theme))).sort((a, b) => a.localeCompare(b, "zh-CN"));
   const topRisks = [...summary.keyRisks].sort((a, b) => {
@@ -394,25 +443,53 @@ function DesktopHome({
         </div>
       </header>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-matrix-line bg-white px-4 py-3">
+        <div>
+          <div className="text-xs font-medium text-zinc-500">账户筛选</div>
+          <div className="mt-1 text-sm font-semibold text-zinc-950">{accountFilter}</div>
+        </div>
+        <div className="flex rounded-lg border border-matrix-line bg-zinc-50 p-0.5">
+          {accountFilters.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onAccountFilterChange(item)}
+              className={cn(
+                "h-8 rounded-md px-3 text-xs font-medium",
+                accountFilter === item ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-900",
+              )}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <section className="grid grid-cols-5 gap-3">
           <DesktopMetric label="总资产" value={formatMoney(summary.totalAssets)} />
           <DesktopMetric
             label="今日估算收益"
-            value={formatMoney(summary.todayEstimatedProfit, { compact: true })}
+            value={formatMoney(summary.todayEstimatedProfit, { compact: true, signed: true })}
+            tone={toneByValue(summary.todayEstimatedProfit)}
+            sub={`${formatPercent(summary.totalAssets ? (summary.todayEstimatedProfit / Math.max(summary.totalAssets - summary.todayEstimatedProfit, 1)) * 100 : 0)} ｜2026-06-29`}
+          />
+          <DesktopMetric
+            label="账户收益"
+            value={accountSummaries
+              .map((item) => `${item.account} ${formatMoney(item.todayEstimatedProfit, { compact: true, signed: true })}`)
+              .join(" / ")}
+            sub={accountSummaries
+              .map((item) => `累计 ${formatMoney(item.accumulatedProfit, { compact: true, signed: true })}`)
+              .join(" / ")}
             tone={toneByValue(summary.todayEstimatedProfit)}
           />
           <DesktopMetric
-            label="今日确认收益"
-            value={formatMoney(summary.todayConfirmedProfit, { compact: true })}
-            tone={toneByValue(summary.todayConfirmedProfit)}
-          />
-          <DesktopMetric
             label="累计收益"
-            value={formatMoney(summary.accumulatedProfit, { compact: true })}
+            value={formatMoney(summary.accumulatedProfit, { compact: true, signed: true })}
             tone={toneByValue(summary.accumulatedProfit)}
           />
           <DesktopMetric
-            label="组合收益率"
+            label="累计收益率"
             value={formatPercent(summary.returnRatePct)}
             tone={toneByValue(summary.returnRatePct)}
           />
@@ -491,14 +568,63 @@ function DesktopHome({
 }
 
 export default function DashboardPage() {
-  const summary = calculatePortfolioSummary();
-  const recommendations = generateAIRecommendations(summary).sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-  const rows = buildPortfolioRows(summary.totalAssets);
+  const [accountFilter, setAccountFilter] = useState<AccountFilter>("全部");
+  const filteredFunds = useMemo(
+    () => (accountFilter === "全部" ? fundHoldings : fundHoldings.filter((item) => item.account === accountFilter)),
+    [accountFilter],
+  );
+  const filteredGold = useMemo(
+    () => (accountFilter === "全部" ? goldHoldings : goldHoldings.filter((item) => item.account === accountFilter)),
+    [accountFilter],
+  );
+  const filteredStocks = useMemo(
+    () => (accountFilter === "全部" ? stockHoldings : stockHoldings.filter((item) => item.account === accountFilter)),
+    [accountFilter],
+  );
+  const filteredCash = useMemo(
+    () => (accountFilter === "全部" || cashHolding.account === accountFilter ? cashHolding : { ...cashHolding, amount: 0 }),
+    [accountFilter],
+  );
+  const summary = useMemo(
+    () => calculatePortfolioSummary(filteredFunds, undefined, filteredStocks, filteredGold, filteredCash),
+    [filteredCash, filteredFunds, filteredGold, filteredStocks],
+  );
+  const recommendations = useMemo(
+    () => generateAIRecommendations(summary).sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]),
+    [summary],
+  );
+  const rows = useMemo(
+    () => buildPortfolioRows(summary.totalAssets, filteredFunds, filteredGold, filteredStocks, filteredCash),
+    [filteredCash, filteredFunds, filteredGold, filteredStocks, summary.totalAssets],
+  );
+  const accountSummaries = useMemo(
+    () =>
+      (["支付宝", "京东"] as AccountSource[]).map((account) => {
+        const accountFunds = fundHoldings.filter((item) => item.account === account);
+        const accountGold = goldHoldings.filter((item) => item.account === account);
+        const accountStocks = stockHoldings.filter((item) => item.account === account);
+        const accountCash = cashHolding.account === account ? cashHolding : { ...cashHolding, amount: 0 };
+        const accountSummary = calculatePortfolioSummary(accountFunds, undefined, accountStocks, accountGold, accountCash);
+        return {
+          account,
+          todayEstimatedProfit: accountSummary.todayEstimatedProfit,
+          accumulatedProfit: accountSummary.accumulatedProfit,
+        };
+      }),
+    [],
+  );
 
   return (
     <>
       <MobileHome summary={summary} recommendations={recommendations} />
-      <DesktopHome summary={summary} recommendations={recommendations} rows={rows} />
+      <DesktopHome
+        summary={summary}
+        recommendations={recommendations}
+        rows={rows}
+        accountFilter={accountFilter}
+        onAccountFilterChange={setAccountFilter}
+        accountSummaries={accountSummaries}
+      />
     </>
   );
 }

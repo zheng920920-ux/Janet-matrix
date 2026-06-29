@@ -5,16 +5,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatMoney(value: number, options?: { compact?: boolean }) {
+export function formatMoney(value: number, options?: { compact?: boolean; signed?: boolean }) {
+  const sign = options?.signed && value > 0 ? "+" : "";
+
   if (options?.compact && Math.abs(value) >= 10000) {
-    return `${(value / 10000).toFixed(2)}万`;
+    return `${sign}${(value / 10000).toFixed(2)}万`;
   }
 
-  return new Intl.NumberFormat("zh-CN", {
-    style: "currency",
-    currency: "CNY",
+  return `${sign}${new Intl.NumberFormat("zh-CN", {
     maximumFractionDigits: 2,
-  }).format(value);
+    minimumFractionDigits: 2,
+  }).format(value)}`;
 }
 
 export function formatNumber(value: number, digits = 2) {
@@ -34,8 +35,8 @@ export function formatPlainPercent(value: number, digits = 2) {
 }
 
 export function toneByValue(value: number) {
-  if (value > 0) return "text-matrix-green";
-  if (value < 0) return "text-matrix-red";
+  if (value > 0) return "text-matrix-red";
+  if (value < 0) return "text-matrix-green";
   return "text-matrix-muted";
 }
 

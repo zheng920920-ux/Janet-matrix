@@ -34,12 +34,12 @@ export function GoldHoldingCard({ holding, totalAssets }: { holding: GoldHolding
         <MetricRow label="当前估算价值" value={formatMoney(metrics.marketValue)} />
         <MetricRow
           label="今日收益"
-          value={formatMoney(metrics.todayProfit)}
+          value={formatMoney(metrics.todayProfit, { signed: true })}
           valueClassName={toneByValue(metrics.todayProfit)}
         />
         <MetricRow
           label="累计收益"
-          value={formatMoney(metrics.accumulatedProfit)}
+          value={formatMoney(metrics.accumulatedProfit, { signed: true })}
           valueClassName={toneByValue(metrics.accumulatedProfit)}
         />
         <MetricRow
@@ -82,12 +82,12 @@ export function StockHoldingCard({ holding, totalAssets }: { holding: StockHoldi
         <MetricRow label="当前估算价值" value={formatMoney(metrics.marketValueCny)} />
         <MetricRow
           label="今日收益"
-          value={formatMoney(metrics.todayProfit)}
+          value={formatMoney(metrics.todayProfit, { signed: true })}
           valueClassName={toneByValue(metrics.todayProfit)}
         />
         <MetricRow
           label="累计收益"
-          value={formatMoney(metrics.accumulatedProfit)}
+          value={formatMoney(metrics.accumulatedProfit, { signed: true })}
           valueClassName={toneByValue(metrics.accumulatedProfit)}
         />
         <MetricRow

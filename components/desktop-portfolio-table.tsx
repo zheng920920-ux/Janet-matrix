@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { AssetType } from "@/lib/types";
+import type { AccountSource, AssetType } from "@/lib/types";
 import { cn, formatMoney, formatPercent } from "@/lib/utils";
 
 export interface PortfolioTableRow {
@@ -11,14 +11,18 @@ export interface PortfolioTableRow {
   name: string;
   code: string;
   assetType: AssetType;
+  account: AccountSource;
   typeLabel: string;
   theme: string;
   marketValue: number;
   todayEstimatedProfit: number;
+  todayChangePct: number;
   todayConfirmedProfit: number;
   accumulatedProfit: number;
   returnRatePct: number;
   weightPct: number;
+  lastAddDate: string;
+  holdingDays?: number;
   fundSizeYi?: number;
   riskTags: string[];
   detailHref: string;
@@ -48,8 +52,8 @@ const sortLabels: Record<SortKey, string> = {
 };
 
 function moneyTone(value: number) {
-  if (value > 0) return "text-matrix-green";
-  if (value < 0) return "text-matrix-red";
+  if (value > 0) return "text-matrix-red";
+  if (value < 0) return "text-matrix-green";
   return "text-zinc-500";
 }
 
@@ -176,28 +180,28 @@ export function DesktopPortfolioTable({
       </div>
 
       <div className="max-h-[calc(100vh-258px)] overflow-auto">
-        <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-[13px] leading-5">
+        <table className="w-full min-w-[1120px] table-fixed border-collapse text-left text-[13px] leading-5">
           <thead className="sticky top-0 z-10 bg-zinc-50 text-zinc-500">
             <tr className="border-b border-matrix-line">
-              <th className="w-[138px] px-3 py-2.5 text-xs font-semibold">名称</th>
-              <th className="w-[44px] px-2 py-2.5 text-xs font-semibold">类型</th>
-              <th className="w-[58px] px-2 py-2.5 text-xs font-semibold">板块</th>
-              <th className="w-[72px] px-2 py-2.5 text-right">
+              <th className="w-[152px] px-3 py-2.5 text-xs font-semibold">名称 / 代码</th>
+              <th className="w-[58px] px-2 py-2.5 text-xs font-semibold">账户</th>
+              <th className="w-[92px] px-2 py-2.5 text-xs font-semibold">类型</th>
+              <th className="w-[72px] px-2 py-2.5 text-xs font-semibold">板块</th>
+              <th className="w-[82px] px-2 py-2.5 text-right">
                 <SortHeader label="持仓金额" sortKey="marketValue" activeKey={sortKey} direction={direction} onSort={handleSort} />
               </th>
-              <th className="w-[72px] px-2 py-2.5 text-right">
+              <th className="w-[92px] px-2 py-2.5 text-right">
                 <SortHeader label="今日收益" sortKey="todayEstimatedProfit" activeKey={sortKey} direction={direction} onSort={handleSort} />
               </th>
-              <th className="w-[72px] px-2 py-2.5 text-right">
+              <th className="w-[92px] px-2 py-2.5 text-right">
                 <SortHeader label="累计收益" sortKey="accumulatedProfit" activeKey={sortKey} direction={direction} onSort={handleSort} />
               </th>
-              <th className="w-[56px] px-2 py-2.5 text-right">
-                <SortHeader label="收益率" sortKey="returnRatePct" activeKey={sortKey} direction={direction} onSort={handleSort} />
-              </th>
               <th className="w-[48px] px-2 py-2.5 text-right text-xs font-semibold">占比</th>
+              <th className="w-[76px] px-2 py-2.5 text-xs font-semibold">最后加仓</th>
+              <th className="w-[54px] px-2 py-2.5 text-right text-xs font-semibold">天数</th>
               <th className="w-[56px] px-2 py-2.5 text-right text-xs font-semibold">规模</th>
-              <th className="w-[78px] px-2 py-2.5 text-xs font-semibold">风险标签</th>
-              <th className="w-[66px] px-2 py-2.5 text-xs font-semibold">操作</th>
+              <th className="w-[86px] px-2 py-2.5 text-xs font-semibold">风险标签</th>
+              <th className="w-[92px] px-2 py-2.5 text-xs font-semibold">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -218,21 +222,23 @@ export function DesktopPortfolioTable({
                     {row.note ? ` · ${row.note}` : ""}
                   </div>
                 </td>
+                <td className="whitespace-nowrap px-2 py-2 text-zinc-700">{row.account}</td>
                 <td className="whitespace-nowrap px-2 py-2 text-zinc-700">{row.typeLabel}</td>
                 <td className="px-2 py-2">
                   <span className="block truncate whitespace-nowrap text-zinc-700">{row.theme}</span>
                 </td>
                 <td className="px-2 py-2 text-right font-semibold tabular-nums text-zinc-950">{formatMoney(row.marketValue, { compact: true })}</td>
                 <td className={cn("px-2 py-2 text-right font-semibold tabular-nums", moneyTone(row.todayEstimatedProfit))}>
-                  {formatMoney(row.todayEstimatedProfit, { compact: true })}
+                  <div>{formatMoney(row.todayEstimatedProfit, { compact: true, signed: true })}</div>
+                  <div className="text-[11px] font-medium">{formatPercent(row.todayChangePct)}</div>
                 </td>
                 <td className={cn("px-2 py-2 text-right font-semibold tabular-nums", moneyTone(row.accumulatedProfit))}>
-                  {formatMoney(row.accumulatedProfit, { compact: true })}
-                </td>
-                <td className={cn("px-2 py-2 text-right font-semibold tabular-nums", moneyTone(row.returnRatePct))}>
-                  {formatPercent(row.returnRatePct)}
+                  <div>{formatMoney(row.accumulatedProfit, { compact: true, signed: true })}</div>
+                  <div className="text-[11px] font-medium">{formatPercent(row.returnRatePct)}</div>
                 </td>
                 <td className="px-2 py-2 text-right tabular-nums text-zinc-700">{formatPercent(row.weightPct, 1).replace("+", "")}</td>
+                <td className="whitespace-nowrap px-2 py-2 text-xs text-zinc-700">{row.lastAddDate}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-zinc-700">{row.holdingDays ? `${row.holdingDays}` : "-"}</td>
                 <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-zinc-700">{row.fundSizeYi ? `${row.fundSizeYi}亿` : "-"}</td>
                 <td className="px-2 py-2">
                   <div className="flex flex-wrap gap-1">
@@ -267,8 +273,15 @@ export function DesktopPortfolioTable({
                       onClick={(event) => event.stopPropagation()}
                       className="text-zinc-500 hover:text-zinc-900"
                     >
-                      观察
+                      修改
                     </button>
+                    <Link
+                      href="/journal"
+                      onClick={(event) => event.stopPropagation()}
+                      className="text-zinc-500 hover:text-zinc-900"
+                    >
+                      记录
+                    </Link>
                     {row.qdiiHref ? (
                       <Link
                         href={row.qdiiHref}
