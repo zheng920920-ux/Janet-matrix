@@ -2,7 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, CircleDollarSign, Home, Landmark, LineChart, Sparkles } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  CircleDollarSign,
+  FileClock,
+  Home,
+  Landmark,
+  LayoutDashboard,
+  LineChart,
+  Search,
+  Settings,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -12,16 +24,78 @@ const navItems = [
   { href: "/stocks", label: "股票", icon: LineChart },
 ];
 
+const desktopNavItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/portfolio", label: "Portfolio", icon: Landmark },
+  { href: "/portfolio", label: "Funds", icon: BarChart3, match: "/funds" },
+  { href: "/qdii", label: "QDII", icon: CircleDollarSign },
+  { href: "/stocks", label: "Stocks", icon: LineChart },
+  { href: "#research", label: "Research", icon: Search },
+  { href: "#journal", label: "Journal", icon: BookOpen },
+  { href: "#settings", label: "Settings", icon: Settings },
+];
+
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname.startsWith(href);
+}
+
+function isDesktopActive(pathname: string, href: string, match?: string) {
+  if (match && pathname.startsWith(match)) return true;
+  if (href.startsWith("#")) return false;
+  return isActive(pathname, href);
 }
 
 export function MobileShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-md bg-matrix-paper lg:max-w-none">
+    <div className="min-h-screen w-full bg-matrix-paper">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[220px] border-r border-matrix-line bg-white lg:block">
+        <div className="flex h-full flex-col px-4 py-6">
+          <Link href="/" className="block">
+            <div className="text-[17px] font-semibold tracking-tight text-matrix-ink">Janet Matrix</div>
+            <div className="mt-1 text-xs text-matrix-muted">Personal Investment OS</div>
+          </Link>
+
+          <nav className="mt-8 space-y-1">
+            {desktopNavItems.map((item) => {
+              const Icon = item.icon;
+              const active = isDesktopActive(pathname, item.href, item.match);
+              const content = (
+                <span
+                  className={cn(
+                    "flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+                    active ? "bg-gray-100 text-matrix-ink" : "text-matrix-muted hover:bg-gray-50 hover:text-matrix-ink",
+                  )}
+                >
+                  <Icon className="h-4 w-4 text-current" strokeWidth={1.8} aria-hidden />
+                  {item.label}
+                </span>
+              );
+
+              return item.href.startsWith("#") ? (
+                <a key={item.label} href={item.href}>
+                  {content}
+                </a>
+              ) : (
+                <Link key={item.label} href={item.href}>
+                  {content}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="mt-auto border-t border-matrix-line pt-4 text-xs leading-relaxed text-matrix-muted">
+            <div className="flex items-center gap-2">
+              <FileClock className="h-4 w-4" strokeWidth={1.8} aria-hidden />
+              <span>Mock Data</span>
+            </div>
+            <div className="mt-1">V3.0 · Updated 2026-06-29</div>
+          </div>
+        </div>
+      </aside>
+
       <header className="sticky top-0 z-30 border-b border-matrix-line bg-matrix-paper/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2">
@@ -43,7 +117,9 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="safe-bottom px-4 py-4 lg:p-0">{children}</main>
+      <main className="safe-bottom px-4 py-4 lg:ml-[220px] lg:px-8 lg:py-6">
+        <div className="lg:mx-auto lg:w-full lg:max-w-[1280px]">{children}</div>
+      </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-matrix-line bg-white/95 px-3 pb-[calc(8px+env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden">
         <div className="grid grid-cols-4 gap-1">

@@ -8,7 +8,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-lg border border-matrix-line bg-white p-4 shadow-soft", className)}>
+    <section className={cn("rounded-xl border border-matrix-line bg-white p-4 shadow-none", className)}>
       {children}
     </section>
   );
@@ -33,9 +33,9 @@ export function StatCard({
   }[tone];
 
   return (
-    <div className="rounded-lg border border-matrix-line bg-white p-3">
+    <div className="rounded-xl border border-matrix-line bg-white p-4">
       <div className="text-xs font-medium text-matrix-muted">{label}</div>
-      <div className={cn("mt-2 text-xl font-bold leading-tight", toneClass)}>{value}</div>
+      <div className={cn("mt-1 text-lg font-semibold leading-6 tabular-nums", toneClass)}>{value}</div>
       {sub ? <div className="mt-1 text-xs leading-snug text-matrix-muted">{sub}</div> : null}
     </div>
   );
@@ -68,9 +68,9 @@ export function SectionHeader({
   description?: string;
 }) {
   return (
-    <div className="mb-3 flex items-end justify-between gap-3">
+    <div className="mb-4 flex items-end justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="text-base font-bold leading-tight text-matrix-ink">{title}</h2>
+        <h2 className="text-lg font-semibold leading-6 text-matrix-ink">{title}</h2>
         {description ? <p className="mt-1 text-xs leading-snug text-matrix-muted">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}

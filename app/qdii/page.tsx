@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, CircleDollarSign } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Disclaimer } from "@/components/disclaimer";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, MetricRow, SectionHeader, StatCard } from "@/components/ui/card";
 import {
@@ -18,20 +19,14 @@ export default function QdiiPage() {
 
   return (
     <div className="space-y-4">
-      <section>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-matrix-ink">QDII专区</h1>
-            <p className="mt-1 text-sm leading-relaxed text-matrix-muted">美股基金估算净值、确认净值、汇率影响和T+2延迟拆开显示。</p>
-          </div>
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-matrix-blue">
-            <CircleDollarSign className="h-5 w-5" aria-hidden />
-          </span>
-        </div>
-      </section>
+      <PageHeader
+        title="QDII专区"
+        description="美股基金估算净值、确认净值、汇率影响和T+2延迟拆开显示。"
+        meta={<span>Updated {qdiiMarketSnapshot.updatedAt}</span>}
+      />
 
-      <Card className="border-blue-200 bg-blue-50 shadow-none">
-        <p className="text-sm font-semibold leading-relaxed text-matrix-blue">
+      <Card className="border-amber-200 bg-white shadow-none">
+        <p className="text-sm font-medium leading-relaxed text-amber-700">
           QDII今日收益仅为参考估算，不适合用于当天买卖判断，最终以基金公司公布净值为准。
         </p>
       </Card>
@@ -88,11 +83,11 @@ export default function QdiiPage() {
                 <Badge tone="blue">T+{market.qdiiDelayDays ?? 2}</Badge>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-blue-50 p-3">
-                  <div className="text-xs text-matrix-blue">估算收益</div>
+                <div className="rounded-xl border border-matrix-line bg-white p-3">
+                  <div className="text-xs text-matrix-muted">估算收益</div>
                   <div className={`mt-1 text-lg font-bold ${toneByValue(estimatedProfit)}`}>{formatMoney(estimatedProfit)}</div>
                 </div>
-                <div className="rounded-lg bg-matrix-paper p-3">
+                <div className="rounded-xl border border-matrix-line bg-white p-3">
                   <div className="text-xs text-matrix-muted">确认收益</div>
                   <div className={`mt-1 text-lg font-bold ${toneByValue(confirmedProfit)}`}>{formatMoney(confirmedProfit)}</div>
                 </div>
@@ -111,7 +106,7 @@ export default function QdiiPage() {
               </div>
               <Link
                 href={`/funds/${holding.code}/comparison`}
-                className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-matrix-ink text-sm font-semibold text-white"
+                className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-matrix-ink text-sm font-semibold text-white"
               >
                 查看同板块对比
                 <ArrowRight className="h-4 w-4" aria-hidden />

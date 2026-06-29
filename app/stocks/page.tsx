@@ -1,4 +1,5 @@
 import { Disclaimer } from "@/components/disclaimer";
+import { PageHeader } from "@/components/page-header";
 import { StockHoldingCard } from "@/components/asset-holding-cards";
 import { Card, SectionHeader, StatCard } from "@/components/ui/card";
 import { calculatePortfolioSummary, calculateStockPosition } from "@/lib/calculations";
@@ -14,10 +15,11 @@ export default function StocksPage() {
 
   return (
     <div className="space-y-4">
-      <section>
-        <h1 className="text-2xl font-bold text-matrix-ink">股票小仓</h1>
-        <p className="mt-1 text-sm leading-relaxed text-matrix-muted">股票以小仓观察方式纳入总资产，实时盈亏和组合占比一起看。</p>
-      </section>
+      <PageHeader
+        title="股票小仓"
+        description="股票以小仓观察方式纳入总资产，实时盈亏和组合占比一起看。"
+        meta={<span>Mock Data</span>}
+      />
 
       <div className="grid grid-cols-3 gap-2">
         <StatCard label="股票市值" value={formatMoney(marketValue, { compact: true })} />

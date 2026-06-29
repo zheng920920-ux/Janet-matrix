@@ -20,8 +20,10 @@ body {
   min-height: 100vh;
   margin: 0;
   background: #f7f8fa;
-  color: #18211f;
-  font-family: Arial, Helvetica, sans-serif;
+  color: #111827;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 a {

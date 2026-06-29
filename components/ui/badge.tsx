@@ -4,11 +4,11 @@ type BadgeTone = "neutral" | "good" | "warn" | "bad" | "blue" | "violet";
 
 const toneClass: Record<BadgeTone, string> = {
   neutral: "border-matrix-line bg-white text-matrix-muted",
-  good: "border-emerald-200 bg-emerald-50 text-matrix-green",
-  warn: "border-amber-200 bg-amber-50 text-matrix-amber",
-  bad: "border-orange-200 bg-orange-50 text-matrix-red",
-  blue: "border-blue-200 bg-blue-50 text-matrix-blue",
-  violet: "border-violet-200 bg-violet-50 text-matrix-violet",
+  good: "border-green-200 bg-white text-matrix-green",
+  warn: "border-amber-200 bg-amber-50 text-amber-700",
+  bad: "border-red-200 bg-white text-matrix-red",
+  blue: "border-matrix-line bg-gray-50 text-matrix-muted",
+  violet: "border-matrix-line bg-gray-50 text-matrix-muted",
 };
 
 export function Badge({

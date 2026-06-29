@@ -30,17 +30,6 @@ const priorityLabel = {
   low: "★★ 提醒",
 } as const;
 
-const desktopNav = [
-  { label: "Dashboard", href: "/" },
-  { label: "Portfolio", href: "/portfolio" },
-  { label: "Funds", href: "/portfolio" },
-  { label: "QDII", href: "/qdii" },
-  { label: "Stocks", href: "/stocks" },
-  { label: "Research", href: "#research" },
-  { label: "Journal", href: "#journal" },
-  { label: "Settings", href: "#settings" },
-];
-
 function safeRecommendationType(type: AIRecommendation["type"]) {
   if (type.includes("换基") || type.includes("替换")) return "可进一步比较";
   if (type.includes("卖出") || type.includes("降低仓位")) return "仅提示风险";
@@ -89,7 +78,7 @@ function DesktopMetric({
   tone?: string;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3">
+    <div className="rounded-xl border border-matrix-line bg-white px-4 py-3">
       <div className="text-xs font-medium text-zinc-500">{label}</div>
       <div className={cn("mt-1 truncate text-lg font-semibold text-zinc-950", tone)}>{value}</div>
     </div>
@@ -104,7 +93,7 @@ function SidePanel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-xl border border-matrix-line bg-white p-4">
       <h2 className="text-sm font-semibold text-zinc-950">{title}</h2>
       <div className="mt-3">{children}</div>
     </section>
@@ -260,7 +249,7 @@ function MobileHome({
               {formatMoney(summary.totalAssets)}
             </h1>
           </div>
-          <Badge tone={summary.todayEstimatedProfit >= 0 ? "good" : "bad"}>V2.0</Badge>
+          <Badge tone={summary.todayEstimatedProfit >= 0 ? "good" : "bad"}>V3.0</Badge>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
@@ -391,46 +380,21 @@ function DesktopHome({
   });
 
   return (
-    <div className="hidden h-screen overflow-hidden bg-[#f7f8fa] text-zinc-950 lg:grid lg:grid-cols-[168px_minmax(0,1fr)_248px]">
-      <aside className="sticky top-0 h-screen border-r border-zinc-200 bg-white px-3 py-5">
+    <div className="hidden space-y-6 text-zinc-950 lg:block">
+      <header className="flex items-end justify-between gap-6">
         <div>
-          <div className="text-base font-semibold tracking-tight text-zinc-950">Janet Matrix</div>
-          <div className="mt-1 text-xs text-zinc-500">Personal Investment OS</div>
+          <h1 className="text-2xl font-semibold leading-7 tracking-tight text-matrix-ink">Dashboard</h1>
+          <p className="mt-2 text-sm leading-5 text-matrix-muted">
+            全部持仓、当日收益和风险状态集中在一张总览表里。
+          </p>
         </div>
-
-        <nav className="mt-8 space-y-1">
-          {desktopNav.map((item) => {
-            const active = item.href === "/";
-            const content = (
-              <span
-                className={cn(
-                  "flex h-9 items-center rounded-md px-3 text-sm font-medium",
-                  active ? "bg-zinc-100 text-zinc-950" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900",
-                )}
-              >
-                {item.label}
-              </span>
-            );
-
-            return item.href.startsWith("#") ? (
-              <a key={item.label} href={item.href}>
-                {content}
-              </a>
-            ) : (
-              <Link key={item.label} href={item.href}>
-                {content}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="absolute bottom-5 left-3 right-3 border-t border-zinc-200 pt-4 text-xs leading-relaxed text-zinc-500">
-          Mock data · V2.0
+        <div className="shrink-0 text-right text-xs leading-5 text-matrix-muted">
+          <div>Mock Data</div>
+          <div>Updated 2026-06-29 09:35</div>
         </div>
-      </aside>
+      </header>
 
-      <main className="h-screen min-w-0 overflow-hidden px-3 py-4">
-        <div className="mb-3 grid grid-cols-5 gap-2">
+      <section className="grid grid-cols-5 gap-3">
           <DesktopMetric label="总资产" value={formatMoney(summary.totalAssets)} />
           <DesktopMetric
             label="今日估算收益"
@@ -452,17 +416,18 @@ function DesktopHome({
             value={formatPercent(summary.returnRatePct)}
             tone={toneByValue(summary.returnRatePct)}
           />
+      </section>
+
+      <div className="grid items-start gap-6 min-[1400px]:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0">
+          <DesktopPortfolioTable rows={rows} themeOptions={themeOptions} />
+
+          <p className="mt-3 text-xs leading-5 text-matrix-muted">
+            仅供个人参考，不构成投资建议。当前为 mock data，估算收益、同板块评分和风险提示只用于验证页面结构与计算逻辑。
+          </p>
         </div>
 
-        <DesktopPortfolioTable rows={rows} themeOptions={themeOptions} />
-
-        <p className="mt-3 text-xs text-zinc-500">
-          仅供个人参考，不构成投资建议。当前为 mock data，估算收益、同板块评分和风险提示只用于验证页面结构与计算逻辑。
-        </p>
-      </main>
-
-      <aside className="sticky top-0 h-screen overflow-y-auto border-l border-zinc-200 bg-white px-3 py-4">
-        <div className="space-y-3">
+        <aside className="space-y-3 min-[1400px]:sticky min-[1400px]:top-6">
           <SidePanel title="今日提醒">
             <div className="space-y-2">
               {summary.operationSuggestions.slice(0, 3).map((item) => (
@@ -475,7 +440,7 @@ function DesktopHome({
 
           <SidePanel title="风险提示">
             <div className="space-y-3">
-              {topRisks.slice(0, 4).map((risk) => (
+              {topRisks.slice(0, 3).map((risk) => (
                 <div key={`${risk.level}-${risk.title}`} className="flex gap-2">
                   <RiskDot level={risk.level} />
                   <div className="min-w-0">
@@ -505,7 +470,7 @@ function DesktopHome({
 
           <SidePanel title="投资健康评分">
             <div className="flex items-end justify-between">
-              <div className="text-3xl font-semibold text-zinc-950">{summary.healthScore}</div>
+              <div className="text-2xl font-semibold text-zinc-950">{summary.healthScore}</div>
               <div className="pb-1 text-xs text-zinc-500">/ 100</div>
             </div>
             <div className="mt-3 space-y-2">
@@ -519,8 +484,8 @@ function DesktopHome({
               ))}
             </div>
           </SidePanel>
-        </div>
-      </aside>
+        </aside>
+      </div>
     </div>
   );
 }

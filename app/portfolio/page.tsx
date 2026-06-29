@@ -2,6 +2,7 @@ import { CashHoldingCard, GoldHoldingCard, StockHoldingCard } from "@/components
 import { AIRecommendationList } from "@/components/ai-recommendation-list";
 import { Disclaimer } from "@/components/disclaimer";
 import { FundHoldingCard } from "@/components/fund-holding-card";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, SectionHeader } from "@/components/ui/card";
 import {
@@ -20,15 +21,11 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-4">
-      <section>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-matrix-ink">我的持仓</h1>
-            <p className="mt-1 text-sm text-matrix-muted">基金、黄金积存金、股票和现金统一查看。</p>
-          </div>
-          <Badge tone="blue">{formatMoney(summary.totalAssets, { compact: true })}</Badge>
-        </div>
-      </section>
+      <PageHeader
+        title="我的持仓"
+        description="基金、黄金积存金、股票和现金统一查看。"
+        meta={<Badge tone="neutral">{formatMoney(summary.totalAssets, { compact: true })}</Badge>}
+      />
 
       <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4">
         {summary.allocation.map((item) => (

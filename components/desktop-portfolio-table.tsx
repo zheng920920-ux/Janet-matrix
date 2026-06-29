@@ -48,14 +48,14 @@ const sortLabels: Record<SortKey, string> = {
 };
 
 function moneyTone(value: number) {
-  if (value > 0) return "text-[#087f5b]";
-  if (value < 0) return "text-[#c2410c]";
+  if (value > 0) return "text-matrix-green";
+  if (value < 0) return "text-matrix-red";
   return "text-zinc-500";
 }
 
 function compactTagClass(tag: string) {
   if (tag.includes("未满") || tag.includes("规模") || tag.includes("仓位") || tag.includes("风险")) {
-    return "border-orange-200 bg-orange-50 text-orange-700";
+    return "border-amber-200 bg-amber-50 text-amber-700";
   }
   return "border-zinc-200 bg-white text-zinc-500";
 }
@@ -94,7 +94,7 @@ function SortHeader({
 
 function Tag({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <span className={cn("inline-flex h-5 max-w-[120px] items-center rounded border px-1.5 text-[11px] leading-none", className)}>
+    <span className={cn("inline-flex h-5 max-w-[112px] items-center rounded-md border px-1.5 text-[11px] leading-none", className)}>
       <span className="truncate">{children}</span>
     </span>
   );
@@ -134,8 +134,8 @@ export function DesktopPortfolioTable({
   }
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-3 py-3">
+    <section className="rounded-xl border border-matrix-line bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-matrix-line px-4 py-3">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-zinc-950">全部持仓总览表</h2>
           <p className="mt-1 text-xs text-zinc-500">
@@ -144,14 +144,14 @@ export function DesktopPortfolioTable({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-md border border-zinc-200 bg-zinc-50 p-0.5">
+          <div className="flex rounded-lg border border-matrix-line bg-zinc-50 p-0.5">
             {typeFilters.map((item) => (
               <button
                 key={item.value}
                 type="button"
                 onClick={() => setTypeFilter(item.value)}
                 className={cn(
-                  "h-7 rounded px-2 text-xs font-medium",
+                  "h-7 rounded-md px-2.5 text-xs font-medium",
                   typeFilter === item.value ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-900",
                 )}
               >
@@ -163,7 +163,7 @@ export function DesktopPortfolioTable({
           <select
             value={themeFilter}
             onChange={(event) => setThemeFilter(event.target.value)}
-            className="h-8 rounded-md border border-zinc-200 bg-white px-2 text-xs font-medium text-zinc-700 outline-none"
+            className="h-8 rounded-lg border border-matrix-line bg-white px-2.5 text-xs font-medium text-zinc-700 outline-none"
           >
             <option value="all">全部板块</option>
             {themeOptions.map((theme) => (
@@ -175,31 +175,29 @@ export function DesktopPortfolioTable({
         </div>
       </div>
 
-      <div className="max-h-[calc(100vh-164px)] overflow-auto">
-        <table className="min-w-[994px] table-fixed border-collapse text-left text-[11px]">
+      <div className="max-h-[calc(100vh-258px)] overflow-auto">
+        <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-[13px] leading-5">
           <thead className="sticky top-0 z-10 bg-zinc-50 text-zinc-500">
-            <tr className="border-b border-zinc-200">
-              <th className="w-[140px] px-2 py-2 font-semibold">名称</th>
-              <th className="w-[62px] px-2 py-2 font-semibold">代码</th>
-              <th className="w-[48px] px-2 py-2 font-semibold">类型</th>
-              <th className="w-[72px] px-2 py-2 font-semibold">板块</th>
-              <th className="w-[74px] px-2 py-2 text-right">
+            <tr className="border-b border-matrix-line">
+              <th className="w-[138px] px-3 py-2.5 text-xs font-semibold">名称</th>
+              <th className="w-[44px] px-2 py-2.5 text-xs font-semibold">类型</th>
+              <th className="w-[58px] px-2 py-2.5 text-xs font-semibold">板块</th>
+              <th className="w-[72px] px-2 py-2.5 text-right">
                 <SortHeader label="持仓金额" sortKey="marketValue" activeKey={sortKey} direction={direction} onSort={handleSort} />
               </th>
-              <th className="w-[72px] px-2 py-2 text-right">
-                <SortHeader label="今日估算" sortKey="todayEstimatedProfit" activeKey={sortKey} direction={direction} onSort={handleSort} />
+              <th className="w-[72px] px-2 py-2.5 text-right">
+                <SortHeader label="今日收益" sortKey="todayEstimatedProfit" activeKey={sortKey} direction={direction} onSort={handleSort} />
               </th>
-              <th className="w-[72px] px-2 py-2 text-right font-semibold">今日确认</th>
-              <th className="w-[72px] px-2 py-2 text-right">
+              <th className="w-[72px] px-2 py-2.5 text-right">
                 <SortHeader label="累计收益" sortKey="accumulatedProfit" activeKey={sortKey} direction={direction} onSort={handleSort} />
               </th>
-              <th className="w-[54px] px-2 py-2 text-right">
+              <th className="w-[56px] px-2 py-2.5 text-right">
                 <SortHeader label="收益率" sortKey="returnRatePct" activeKey={sortKey} direction={direction} onSort={handleSort} />
               </th>
-              <th className="w-[44px] px-2 py-2 text-right font-semibold">占比</th>
-              <th className="w-[56px] px-2 py-2 text-right font-semibold">规模</th>
-              <th className="w-[112px] px-2 py-2 font-semibold">风险标签</th>
-              <th className="w-[118px] px-2 py-2 font-semibold">操作入口</th>
+              <th className="w-[48px] px-2 py-2.5 text-right text-xs font-semibold">占比</th>
+              <th className="w-[56px] px-2 py-2.5 text-right text-xs font-semibold">规模</th>
+              <th className="w-[78px] px-2 py-2.5 text-xs font-semibold">风险标签</th>
+              <th className="w-[66px] px-2 py-2.5 text-xs font-semibold">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -211,32 +209,31 @@ export function DesktopPortfolioTable({
                 onKeyDown={(event) => {
                   if (event.key === "Enter") router.push(row.detailHref);
                 }}
-                className="cursor-pointer border-b border-zinc-100 bg-white hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none"
+                className="h-12 cursor-pointer border-b border-zinc-100 bg-white hover:bg-zinc-50 focus:bg-zinc-50 focus:outline-none"
               >
-                <td className="px-2 py-2">
+                <td className="px-3 py-2">
                   <div className="truncate font-semibold text-zinc-950">{row.name}</div>
-                  {row.note ? <div className="mt-0.5 truncate text-[11px] text-zinc-500">{row.note}</div> : null}
+                  <div className="mt-0.5 truncate text-xs text-zinc-500">
+                    {row.code}
+                    {row.note ? ` · ${row.note}` : ""}
+                  </div>
                 </td>
-                <td className="truncate whitespace-nowrap px-2 py-2 font-mono text-[10px] text-zinc-500">{row.code}</td>
                 <td className="whitespace-nowrap px-2 py-2 text-zinc-700">{row.typeLabel}</td>
                 <td className="px-2 py-2">
                   <span className="block truncate whitespace-nowrap text-zinc-700">{row.theme}</span>
                 </td>
-                <td className="px-2 py-2 text-right font-semibold text-zinc-950">{formatMoney(row.marketValue, { compact: true })}</td>
-                <td className={cn("px-2 py-2 text-right font-semibold", moneyTone(row.todayEstimatedProfit))}>
+                <td className="px-2 py-2 text-right font-semibold tabular-nums text-zinc-950">{formatMoney(row.marketValue, { compact: true })}</td>
+                <td className={cn("px-2 py-2 text-right font-semibold tabular-nums", moneyTone(row.todayEstimatedProfit))}>
                   {formatMoney(row.todayEstimatedProfit, { compact: true })}
                 </td>
-                <td className={cn("px-2 py-2 text-right font-semibold", moneyTone(row.todayConfirmedProfit))}>
-                  {formatMoney(row.todayConfirmedProfit, { compact: true })}
-                </td>
-                <td className={cn("px-2 py-2 text-right font-semibold", moneyTone(row.accumulatedProfit))}>
+                <td className={cn("px-2 py-2 text-right font-semibold tabular-nums", moneyTone(row.accumulatedProfit))}>
                   {formatMoney(row.accumulatedProfit, { compact: true })}
                 </td>
-                <td className={cn("px-2 py-2 text-right font-semibold", moneyTone(row.returnRatePct))}>
+                <td className={cn("px-2 py-2 text-right font-semibold tabular-nums", moneyTone(row.returnRatePct))}>
                   {formatPercent(row.returnRatePct)}
                 </td>
-                <td className="px-2 py-2 text-right text-zinc-700">{formatPercent(row.weightPct, 1).replace("+", "")}</td>
-                <td className="whitespace-nowrap px-2 py-2 text-right text-zinc-700">{row.fundSizeYi ? `${row.fundSizeYi}亿` : "-"}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-zinc-700">{formatPercent(row.weightPct, 1).replace("+", "")}</td>
+                <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-zinc-700">{row.fundSizeYi ? `${row.fundSizeYi}亿` : "-"}</td>
                 <td className="px-2 py-2">
                   <div className="flex flex-wrap gap-1">
                     {row.isQdii ? <Tag className="border-zinc-200 bg-zinc-50 text-zinc-600">QDII</Tag> : null}
@@ -248,7 +245,7 @@ export function DesktopPortfolioTable({
                   </div>
                 </td>
                 <td className="px-2 py-2">
-                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] font-semibold">
+                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs font-medium">
                     <Link
                       href={row.detailHref}
                       onClick={(event) => event.stopPropagation()}

@@ -4,6 +4,7 @@ import { ArrowLeft, GitCompareArrows } from "lucide-react";
 import { Disclaimer } from "@/components/disclaimer";
 import { FundHoldingCard } from "@/components/fund-holding-card";
 import { PerformanceLineChart } from "@/components/charts/performance-line-chart";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, MetricRow, SectionHeader } from "@/components/ui/card";
 import {
@@ -39,14 +40,16 @@ export default async function FundDetailPage({ params }: { params: Promise<{ cod
         返回持仓
       </Link>
 
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        title={holding.name}
+        description={`${holding.code} · ${holding.fundType} · ${holding.fundCompany}`}
+        meta={
+          <div className="flex flex-wrap justify-end gap-2">
           <Badge tone={holding.isQdii ? "blue" : "neutral"}>{holding.theme}</Badge>
           <Badge tone={market.fundSizeYi < 10 ? "warn" : "good"}>规模 {market.fundSizeYi}亿元</Badge>
         </div>
-        <h1 className="text-2xl font-bold leading-tight text-matrix-ink">{holding.name}</h1>
-        <p className="text-sm text-matrix-muted">{holding.code} · {holding.fundType} · {holding.fundCompany}</p>
-      </section>
+        }
+      />
 
       <FundHoldingCard holding={holding} market={market} totalAssets={totalAssets} compact />
 

@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, CircleAlert } from "lucide-react";
 import { Disclaimer } from "@/components/disclaimer";
 import { PeerRadarChart } from "@/components/charts/peer-radar-chart";
 import { PeerScoreChart } from "@/components/charts/peer-score-chart";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, MetricRow, SectionHeader, StatCard } from "@/components/ui/card";
 import { compareFundWithinTheme, getFundHolding, getPeerScoreBreakdown } from "@/lib/calculations";
@@ -42,13 +43,11 @@ export default async function FundComparisonPage({ params }: { params: Promise<{
         返回基金详情
       </Link>
 
-      <section className="space-y-2">
-        <Badge tone="blue">{holding.theme}</Badge>
-        <h1 className="text-2xl font-bold leading-tight text-matrix-ink">同板块基金对比</h1>
-        <p className="text-sm leading-relaxed text-matrix-muted">
-          当前基金：{holding.name}。系统按规模、收益、回撤、波动、夏普、跟踪误差、费率、经理任期和申赎状态综合评分。
-        </p>
-      </section>
+      <PageHeader
+        title="同板块基金对比"
+        description={`当前基金：${holding.name}。系统按规模、收益、回撤、波动、夏普、跟踪误差、费率、经理任期和申赎状态综合评分。`}
+        meta={<Badge tone="neutral">{holding.theme}</Badge>}
+      />
 
       <div className="grid grid-cols-3 gap-2">
         <StatCard label="当前排名" value={`${result.rank}/${result.total}`} />
