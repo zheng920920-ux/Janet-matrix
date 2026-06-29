@@ -30,6 +30,12 @@ export default function QdiiPage() {
         </div>
       </section>
 
+      <Card className="border-blue-200 bg-blue-50 shadow-none">
+        <p className="text-sm font-semibold leading-relaxed text-matrix-blue">
+          QDII今日收益仅为参考估算，不适合用于当天买卖判断，最终以基金公司公布净值为准。
+        </p>
+      </Card>
+
       <Card>
         <SectionHeader title="昨夜美股与汇率" description={`更新时间：${qdiiMarketSnapshot.updatedAt}`} />
         <div className="grid grid-cols-2 gap-2">
@@ -95,6 +101,7 @@ export default function QdiiPage() {
                 <MetricRow label="持有份额" value={formatNumber(holding.shares, 2)} />
                 <MetricRow label="持仓成本" value={formatMoney(holding.costAmount)} />
                 <MetricRow label="最新确认净值" value={`${formatNumber(market.latestConfirmedNav, 4)} (${market.confirmedDate})`} />
+                <MetricRow label="净值日期" value={market.confirmedDate} />
                 <MetricRow label="估算净值" value={formatNumber(estimatedNav, 4)} valueClassName="text-matrix-blue" />
                 <MetricRow label="昨夜指数涨跌" value={market.indexChangePct ? formatPercent(market.indexChangePct) : "无"} />
                 <MetricRow label="汇率变化修正" value={market.fxChangePct ? formatPercent(market.fxChangePct) : "无"} />

@@ -17,6 +17,7 @@ import type {
   FundPositionMetrics,
   GoldHolding,
   GoldPositionMetrics,
+  PeerScoreBreakdown,
   PortfolioSummary,
   ScoredPeerFund,
   StockHolding,
@@ -379,6 +380,116 @@ export function scorePeerFunds(peers: FundPeerComparison[]): ScoredPeerFund[] {
     .map((peer, index) => ({ ...peer, rank: index + 1 }));
 }
 
+function scorePart(value: number, max: number) {
+  return Number(clamp(value, 0, max).toFixed(1));
+}
+
+export function getPeerScoreBreakdown(
+  peer: ScoredPeerFund,
+  peers: ScoredPeerFund[],
+): PeerScoreBreakdown {
+  const group = peers.length ? peers : [peer];
+  const getRange = (selector: (item: ScoredPeerFund) => number) => {
+    const values = group.map(selector);
+    return { min: Math.min(...values), max: Math.max(...values) };
+  };
+
+  const ranges = {
+    month6: getRange((item) => item.returns.month6),
+    year1: getRange((item) => item.returns.year1),
+    year3: getRange((item) => item.returns.year3),
+    drawdown: getRange((item) => Math.abs(item.maxDrawdownPct)),
+    volatility: getRange((item) => item.volatilityPct),
+    sharpe: getRange((item) => item.sharpeRatio),
+    fee: getRange((item) => item.feePct),
+    size: getRange((item) => item.fundSizeYi),
+    tenure: getRange((item) => item.managerTenureYears),
+    tracking: getRange((item) => item.trackingErrorPct ?? 1.5),
+  };
+
+  const performance = scorePart(
+    normalize(peer.returns.month6, ranges.month6.min, ranges.month6.max) * 12 +
+      normalize(peer.returns.year1, ranges.year1.min, ranges.year1.max) * 18 +
+      normalize(peer.returns.year3, ranges.year3.min, ranges.year3.max) * 10,
+    40,
+  );
+  const risk = scorePart(
+    normalize(Math.abs(peer.maxDrawdownPct), ranges.drawdown.min, ranges.drawdown.max, false) * 10 +
+      normalize(peer.volatilityPct, ranges.volatility.min, ranges.volatility.max, false) * 7 +
+      normalize(peer.sharpeRatio, ranges.sharpe.min, ranges.sharpe.max) * 8,
+    25,
+  );
+  const fee = scorePart(normalize(peer.feePct, ranges.fee.min, ranges.fee.max, false) * 15, 15);
+  const size = scorePart(normalize(peer.fundSizeYi, ranges.size.min, ranges.size.max) * 10, 10);
+  const manager = scorePart(normalize(peer.managerTenureYears, ranges.tenure.min, ranges.tenure.max) * 5, 5);
+  const tracking = scorePart(
+    normalize(peer.trackingErrorPct ?? 1.5, ranges.tracking.min, ranges.tracking.max, false) * 5,
+    5,
+  );
+
+  const themeAverage6m = average(group.map((item) => item.returns.month6));
+  const themeAverage1y = average(group.map((item) => item.returns.year1));
+  const themeAverageDrawdown = average(group.map((item) => Math.abs(item.maxDrawdownPct)));
+  const bestFee = Math.min(...group.map((item) => item.feePct));
+  const bestTracking = Math.min(...group.map((item) => item.trackingErrorPct ?? 1.5));
+
+  const deductions = [
+    peer.returns.month6 < themeAverage6m ? "近6个月弱于同板块平均，可加入观察名单。" : "",
+    peer.returns.year1 < themeAverage1y ? "近1年收益不占优，适合继续横向比较。" : "",
+    Math.abs(peer.maxDrawdownPct) > themeAverageDrawdown ? "最大回撤高于同板块平均，风险控制扣分。" : "",
+    peer.feePct > bestFee + 0.2 ? "费率略高，长期持有时需要关注成本差异。" : "",
+    peer.fundSizeYi < 10 ? "基金规模低于10亿元，关注流动性和清盘风险。" : "",
+    (peer.trackingErrorPct ?? 0) > bestTracking + 0.4 ? "跟踪误差较大，指数基金需要持续观察。" : "",
+  ].filter(Boolean);
+
+  const parts = [
+    {
+      label: "收益表现",
+      score: performance,
+      max: 40,
+      reason: `近6月${peer.returns.month6.toFixed(1)}%，近1年${peer.returns.year1.toFixed(1)}%。`,
+    },
+    {
+      label: "风险控制",
+      score: risk,
+      max: 25,
+      reason: `最大回撤${peer.maxDrawdownPct.toFixed(1)}%，波动率${peer.volatilityPct.toFixed(1)}%。`,
+    },
+    {
+      label: "费率水平",
+      score: fee,
+      max: 15,
+      reason: `综合费率${peer.feePct.toFixed(2)}%，越低越有优势。`,
+    },
+    {
+      label: "基金规模",
+      score: size,
+      max: 10,
+      reason: `当前规模${peer.fundSizeYi}亿元。`,
+    },
+    {
+      label: "经理稳定性",
+      score: manager,
+      max: 5,
+      reason: `基金经理任期${peer.managerTenureYears}年。`,
+    },
+    {
+      label: "跟踪误差",
+      score: tracking,
+      max: 5,
+      reason: peer.trackingErrorPct ? `跟踪误差${peer.trackingErrorPct.toFixed(2)}%。` : "主动基金暂不重点计算跟踪误差。",
+    },
+  ];
+
+  const total = Number(parts.reduce((sum, item) => sum + item.score, 0).toFixed(1));
+
+  return {
+    total,
+    parts,
+    deductions: deductions.length ? deductions : ["暂无明显扣分项，保持常规跟踪。"],
+  };
+}
+
 export function compareFundWithinTheme(fundCode: string): FundComparisonResult | undefined {
   const holding = getFundHolding(fundCode);
   if (!holding) return undefined;
@@ -457,10 +568,10 @@ export function generateAIRecommendations(summary = calculatePortfolioSummary())
     if (holding.isQdii) {
       recommendations.push({
         id: `rec-${holding.code}-qdii`,
-        type: "继续持有",
+        type: "等待确认净值",
         assetName: holding.name,
         priority: "medium",
-        message: "QDII收益存在T+2延迟，今日展示为估算值，不建议根据单日估算频繁操作。",
+        message: "QDII收益存在T+2延迟，今日展示为估算值，适合等待确认净值后再复盘。",
         reason: `估算净值基于${market.indexName ?? "对应指数"}涨跌和美元人民币变化修正，确认收益仍以${market.confirmedDate}净值为准。`,
         disclaimer: DISCLAIMER,
       });
@@ -469,11 +580,11 @@ export function generateAIRecommendations(summary = calculatePortfolioSummary())
     if (!metrics.isSevenDayMature) {
       recommendations.push({
         id: `rec-${holding.code}-7d`,
-        type: "不建议卖出，未满7天",
+        type: "仅提示风险",
         assetName: holding.name,
         priority: "high",
-        message: "持有未满7天，赎回费和交易摩擦可能显著侵蚀收益。",
-        reason: `当前持有${metrics.holdingDays}天，先观察到满7天后再评估。`,
+        message: "持有未满7天，赎回费和交易摩擦可能显著影响短期收益。",
+        reason: `当前持有${metrics.holdingDays}天，可先记录波动，满7天后再做横向评估。`,
         disclaimer: DISCLAIMER,
       });
     }
@@ -481,10 +592,10 @@ export function generateAIRecommendations(summary = calculatePortfolioSummary())
     if (market.fundSizeYi < 10) {
       recommendations.push({
         id: `rec-${holding.code}-size`,
-        type: "观察换基",
+        type: "关注基金规模",
         assetName: holding.name,
         priority: "medium",
-        message: "基金规模偏小，加入观察名单。",
+        message: "基金规模偏小，可加入观察名单。",
         reason: `当前规模${market.fundSizeYi}亿元，低于个人观察阈值10亿元。`,
         disclaimer: DISCLAIMER,
       });
@@ -493,13 +604,13 @@ export function generateAIRecommendations(summary = calculatePortfolioSummary())
     if (comparison && comparison.decision !== "继续持有") {
       recommendations.push({
         id: `rec-${holding.code}-peer`,
-        type: comparison.decision === "建议评估换基" ? "建议评估换基" : "加入观察名单",
+        type: comparison.decision === "建议评估换基" ? "可进一步比较" : "加入观察名单",
         assetName: holding.name,
         priority: comparison.decision === "建议评估换基" ? "high" : "medium",
         message:
           comparison.decision === "建议评估换基"
-            ? "长期收益、费率或跟踪误差同时落后，建议进一步比较后再决定。"
-            : "当前同板块排名不靠前，先加入观察名单，不急于换基。",
+            ? "长期收益、费率或跟踪误差同时落后，可进一步比较候选基金。"
+            : "当前同板块排名不靠前，可先加入观察名单，暂不处理。",
         reason: comparison.reasons.join(" "),
         disclaimer: DISCLAIMER,
       });
@@ -510,10 +621,10 @@ export function generateAIRecommendations(summary = calculatePortfolioSummary())
   if (goldWeight > 20) {
     recommendations.push({
       id: "rec-gold-weight",
-      type: "暂停买入",
+      type: "关注仓位变化",
       assetName: "黄金",
       priority: goldWeight > 25 ? "high" : "medium",
-      message: "黄金仓位偏高，建议暂停新增。",
+      message: "黄金仓位偏高，新增记录可先放入观察。",
       reason: `黄金当前占比${goldWeight.toFixed(1)}%，已高于20%的个人观察阈值。`,
       disclaimer: DISCLAIMER,
     });
@@ -524,7 +635,7 @@ export function generateAIRecommendations(summary = calculatePortfolioSummary())
     if (Math.abs(metrics.todayChangePct) >= 3) {
       recommendations.push({
         id: `rec-${holding.code}-stock-vol`,
-        type: "继续持有",
+        type: "仅提示风险",
         assetName: holding.name,
         priority: "low",
         message: "今日波动较大，但仓位较小，仅提示风险。",

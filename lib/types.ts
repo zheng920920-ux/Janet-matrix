@@ -35,6 +35,13 @@ export type RiskTag =
 export type RecommendationType =
   | "继续持有"
   | "继续定投"
+  | "暂不处理"
+  | "等待确认净值"
+  | "继续记录"
+  | "关注基金规模"
+  | "关注仓位变化"
+  | "仅提示风险"
+  | "可进一步比较"
   | "暂停买入"
   | "加入观察名单"
   | "建议进一步比较"
@@ -257,6 +264,17 @@ export interface GoldPositionMetrics {
 export interface ScoredPeerFund extends FundPeerComparison {
   score: number;
   rank: number;
+}
+
+export interface PeerScoreBreakdown {
+  total: number;
+  parts: Array<{
+    label: string;
+    score: number;
+    max: number;
+    reason: string;
+  }>;
+  deductions: string[];
 }
 
 export interface FundComparisonResult {

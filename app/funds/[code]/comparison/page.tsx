@@ -6,7 +6,7 @@ import { PeerRadarChart } from "@/components/charts/peer-radar-chart";
 import { PeerScoreChart } from "@/components/charts/peer-score-chart";
 import { Badge } from "@/components/ui/badge";
 import { Card, MetricRow, SectionHeader, StatCard } from "@/components/ui/card";
-import { compareFundWithinTheme, getFundHolding } from "@/lib/calculations";
+import { compareFundWithinTheme, getFundHolding, getPeerScoreBreakdown } from "@/lib/calculations";
 import { fundHoldings } from "@/lib/mock-data";
 import { formatPercent, formatPlainPercent } from "@/lib/utils";
 
@@ -16,8 +16,13 @@ export function generateStaticParams() {
 
 function decisionTone(decision: string) {
   if (decision === "继续持有") return "good" as const;
-  if (decision === "建议评估换基") return "bad" as const;
   return "warn" as const;
+}
+
+function decisionLabel(decision: string) {
+  if (decision === "继续持有") return "暂不处理";
+  if (decision === "建议评估换基") return "可进一步比较";
+  return "加入观察";
 }
 
 export default async function FundComparisonPage({ params }: { params: Promise<{ code: string }> }) {
@@ -28,6 +33,7 @@ export default async function FundComparisonPage({ params }: { params: Promise<{
   if (!holding || !result) notFound();
 
   const bestAlternative = result.alternatives[0] ?? result.rankedPeers.find((item) => item.fundCode !== code);
+  const scoreBreakdown = getPeerScoreBreakdown(result.current, result.rankedPeers);
 
   return (
     <div className="space-y-4">
@@ -46,9 +52,42 @@ export default async function FundComparisonPage({ params }: { params: Promise<{
 
       <div className="grid grid-cols-3 gap-2">
         <StatCard label="当前排名" value={`${result.rank}/${result.total}`} />
-        <StatCard label="优选评分" value={`${result.current.score}`} tone={result.current.score >= 70 ? "good" : "warn"} />
-        <StatCard label="系统判断" value={result.decision} tone={decisionTone(result.decision)} />
+        <StatCard label="综合评分" value={`${scoreBreakdown.total}/100`} tone={scoreBreakdown.total >= 70 ? "good" : "warn"} />
+        <StatCard label="状态" value={decisionLabel(result.decision)} tone={decisionTone(result.decision)} />
       </div>
+
+      <Card>
+        <SectionHeader title="评分拆解" description="评分拆开显示，方便知道扣分来自收益、风险、费率、规模还是跟踪误差。" />
+        <div className="space-y-2">
+          {scoreBreakdown.parts.map((part) => (
+            <div key={part.label} className="rounded-lg bg-matrix-paper p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-bold text-matrix-ink">{part.label}</div>
+                <div className="text-sm font-bold text-matrix-ink">
+                  {part.score} / {part.max}
+                </div>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full bg-matrix-ink"
+                  style={{ width: `${Math.min(100, (part.score / part.max) * 100)}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-matrix-muted">{part.reason}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 border-t border-matrix-line pt-3">
+          <div className="text-sm font-bold text-matrix-ink">为什么扣分？</div>
+          <div className="mt-2 space-y-2">
+            {scoreBreakdown.deductions.map((item) => (
+              <div key={item} className="text-xs leading-relaxed text-matrix-muted">
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
 
       <Card>
         <SectionHeader title="当前持有基金在同板块排名" />
@@ -65,7 +104,7 @@ export default async function FundComparisonPage({ params }: { params: Promise<{
         <MetricRow label="是否继续持有" value={result.decision === "继续持有" ? "是" : "否，需进一步观察"} />
         <MetricRow label="是否需要观察" value={result.decision === "继续持有" ? "常规跟踪" : "是，加入观察名单"} />
         <MetricRow label="是否建议进一步比较" value={result.decision === "继续持有" ? "暂不需要" : "是，查看候选基金"} />
-        <MetricRow label="是否建议评估换基" value={result.decision === "建议评估换基" ? "是，但不建议立即操作" : "否，先观察"} />
+        <MetricRow label="是否需要评估调整" value={result.decision === "建议评估换基" ? "满足多个观察条件，可进一步比较" : "暂不处理，先观察"} />
         <div className="mt-3 space-y-2">
           {result.reasons.map((reason) => (
             <div key={reason} className="flex gap-2 text-sm leading-relaxed text-matrix-ink">

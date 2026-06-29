@@ -1,155 +1,202 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CheckCircle2, CircleDot, Landmark, ShieldCheck } from "lucide-react";
+import { CompactCashCard, CompactFundCard, CompactGoldCard, CompactStockCard } from "@/components/compact-position-card";
 import { Disclaimer } from "@/components/disclaimer";
 import { Badge } from "@/components/ui/badge";
 import { Card, SectionHeader } from "@/components/ui/card";
-import { calculatePortfolioSummary } from "@/lib/calculations";
-import { formatMoney, formatPercent, toneByValue } from "@/lib/utils";
+import { calculatePortfolioSummary, generateAIRecommendations, getFundMarketData } from "@/lib/calculations";
+import { cashHolding, fundHoldings, goldHoldings, stockHoldings } from "@/lib/mock-data";
+import type { AIRecommendation } from "@/lib/types";
+import { cn, formatMoney, formatPercent, toneByValue } from "@/lib/utils";
 
-const riskTone = {
+const priorityOrder = { high: 0, medium: 1, low: 2 } as const;
+
+const priorityTone = {
   high: "bad",
   medium: "warn",
   low: "neutral",
 } as const;
 
-const riskLabel = {
-  high: "高风险",
-  medium: "中风险",
-  low: "普通提醒",
+const priorityLabel = {
+  high: "★★★★★ 必须处理",
+  medium: "★★★★ 建议关注",
+  low: "★★ 提醒",
 } as const;
+
+function safeRecommendationType(type: AIRecommendation["type"]) {
+  if (type.includes("换基") || type.includes("替换")) return "可进一步比较";
+  if (type.includes("卖出") || type.includes("降低仓位")) return "仅提示风险";
+  if (type.includes("买入")) return "关注仓位变化";
+  if (type.includes("持有")) return "暂不处理";
+  return type;
+}
+
+function CompactAiItem({ item }: { item: AIRecommendation }) {
+  return (
+    <div className="rounded-lg border border-matrix-line bg-white p-3">
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <Badge tone={priorityTone[item.priority]}>{priorityLabel[item.priority]}</Badge>
+        <Badge tone="neutral">{safeRecommendationType(item.type)}</Badge>
+      </div>
+      <div className="text-sm font-bold leading-snug text-matrix-ink">{item.assetName}</div>
+      <p className="mt-1 text-xs leading-relaxed text-matrix-muted">{item.message}</p>
+    </div>
+  );
+}
+
+function SummaryMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[11px] text-matrix-muted">{label}</div>
+      <div className={cn("mt-1 truncate text-base font-bold leading-tight text-matrix-ink", tone)}>{value}</div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const summary = calculatePortfolioSummary();
-  const topRisks = [...summary.keyRisks].sort((a, b) => {
-    const order = { high: 0, medium: 1, low: 2 };
-    return order[a.level] - order[b.level];
-  });
+  const recommendations = generateAIRecommendations(summary).sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+  const topRecommendations = recommendations.slice(0, 3);
+  const restRecommendations = recommendations.slice(3);
+  const holdingCount = fundHoldings.length + goldHoldings.length + stockHoldings.length + 1;
+  const allocationLine = summary.allocation
+    .map((item) => `${item.label} ${item.weightPct.toFixed(0)}%`)
+    .join("｜");
+  const healthLine = summary.assetHealth
+    .map((item) => `${item.label}${item.status}`)
+    .join("｜");
+  const shortReminders = [
+    "QDII基金今日收益为估算值，最终以基金公司公布净值为准。",
+    "半导体基金未满7天，可先记录波动，暂不因短期变化处理。",
+    "黄金仓位偏高，新增买入可先暂停观察。",
+  ];
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg bg-matrix-ink p-4 text-white shadow-soft">
+    <div className="space-y-3">
+      <section className="rounded-lg border border-matrix-line bg-white p-3">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium text-white/70">总资产</p>
-            <h1 className="mt-2 text-3xl font-bold leading-tight">{formatMoney(summary.totalAssets)}</h1>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-matrix-muted">总资产</p>
+            <h1 className="mt-1 truncate text-2xl font-bold leading-tight text-matrix-ink">
+              {formatMoney(summary.totalAssets)}
+            </h1>
           </div>
-          <Badge tone="good" className="border-white/20 bg-white/10 text-white">
-            Dashboard 2.0
-          </Badge>
+          <Badge tone={summary.todayEstimatedProfit >= 0 ? "good" : "bad"}>持仓总览 V0.3</Badge>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-md bg-white/10 p-3">
-            <div className="text-xs text-white/60">今日估算收益</div>
-            <div className={summary.todayEstimatedProfit >= 0 ? "mt-1 text-xl font-bold text-emerald-200" : "mt-1 text-xl font-bold text-orange-200"}>
-              {formatMoney(summary.todayEstimatedProfit)}
-            </div>
-          </div>
-          <div className="rounded-md bg-white/10 p-3">
-            <div className="text-xs text-white/60">今日确认收益</div>
-            <div className="mt-1 text-xl font-bold">{formatMoney(summary.todayConfirmedProfit)}</div>
-          </div>
+        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
+          <SummaryMetric
+            label="今日估算"
+            value={formatMoney(summary.todayEstimatedProfit, { compact: true })}
+            tone={toneByValue(summary.todayEstimatedProfit)}
+          />
+          <SummaryMetric
+            label="今日确认"
+            value={formatMoney(summary.todayConfirmedProfit, { compact: true })}
+            tone={toneByValue(summary.todayConfirmedProfit)}
+          />
+          <SummaryMetric
+            label="累计收益"
+            value={formatMoney(summary.accumulatedProfit, { compact: true })}
+            tone={toneByValue(summary.accumulatedProfit)}
+          />
+          <SummaryMetric
+            label="组合收益率"
+            value={formatPercent(summary.returnRatePct)}
+            tone={toneByValue(summary.returnRatePct)}
+          />
+        </div>
+
+        <div className="mt-3 border-t border-matrix-line pt-2 text-xs leading-relaxed text-matrix-muted">
+          {allocationLine}
         </div>
       </section>
 
-      <Card>
-        <SectionHeader title="Morning Brief" description="今天我的组合怎么样？今天需要做什么？" />
-        <div className="space-y-2">
-          {summary.morningBrief.map((line) => (
-            <div key={line} className="flex gap-2 text-sm leading-relaxed text-matrix-ink">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-matrix-green" aria-hidden />
-              <span>{line}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <SectionHeader title="今日重点风险" />
-        <div className="space-y-2">
-          {topRisks.slice(0, 4).map((risk) => (
-            <div key={`${risk.level}-${risk.title}`} className="flex gap-3 rounded-lg bg-matrix-paper p-3">
-              <AlertTriangle
-                className={
-                  risk.level === "high"
-                    ? "mt-0.5 h-4 w-4 shrink-0 text-matrix-red"
-                    : risk.level === "medium"
-                      ? "mt-0.5 h-4 w-4 shrink-0 text-matrix-amber"
-                      : "mt-0.5 h-4 w-4 shrink-0 text-matrix-muted"
-                }
-                aria-hidden
-              />
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-bold text-matrix-ink">{risk.title}</span>
-                  <Badge tone={riskTone[risk.level]}>{riskLabel[risk.level]}</Badge>
-                </div>
-                <p className="mt-1 text-xs leading-relaxed text-matrix-muted">{risk.message}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
       <Link
         href="/portfolio"
-        className="flex h-12 items-center justify-center gap-2 rounded-md bg-matrix-ink text-sm font-semibold text-white"
+        className="block rounded-lg border border-matrix-line bg-white px-3 py-2 text-xs leading-relaxed text-matrix-muted"
       >
-        <Landmark className="h-4 w-4" aria-hidden />
-        查看持仓
-        <ArrowRight className="h-4 w-4" aria-hidden />
+        <span className="font-bold text-matrix-ink">投资健康度：{summary.healthScore} / 100</span>
+        <span> ｜{healthLine}</span>
       </Link>
 
-      <Card>
-        <SectionHeader title="为什么今天盈利/亏损" />
+      <section className="space-y-2">
+        <SectionHeader
+          title="全部持仓"
+          description={`${holdingCount}项资产，首页直接查看今日收益、累计收益、板块和基金规模。`}
+          action={
+            <Link href="/portfolio" className="text-xs font-semibold text-matrix-muted">
+              持仓页
+            </Link>
+          }
+        />
+
         <div className="space-y-2">
-          {summary.profitDrivers.slice(0, 3).map((driver) => (
-            <div key={driver.label} className="rounded-lg bg-matrix-paper p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 text-sm font-bold text-matrix-ink">{driver.label}</div>
-                <div className={`shrink-0 text-sm font-bold ${toneByValue(driver.value)}`}>
-                  {formatMoney(driver.value, { compact: true })}
-                </div>
-              </div>
-              <p className="mt-1 text-xs leading-relaxed text-matrix-muted">{driver.reason}</p>
-            </div>
+          {fundHoldings.map((holding) => {
+            const market = getFundMarketData(holding.code);
+            if (!market) return null;
+            return (
+              <CompactFundCard
+                key={holding.code}
+                holding={holding}
+                market={market}
+                totalAssets={summary.totalAssets}
+              />
+            );
+          })}
+          {goldHoldings.map((holding) => (
+            <CompactGoldCard key={holding.code} holding={holding} totalAssets={summary.totalAssets} />
           ))}
+          {stockHoldings.map((holding) => (
+            <CompactStockCard key={holding.code} holding={holding} totalAssets={summary.totalAssets} />
+          ))}
+          <CompactCashCard holding={cashHolding} totalAssets={summary.totalAssets} />
         </div>
+      </section>
+
+      <Card className="p-3 shadow-none">
+        <SectionHeader title="今日简短提醒" />
+        <ol className="space-y-2">
+          {shortReminders.map((reminder, index) => (
+            <li key={reminder} className="flex gap-2 text-xs leading-relaxed text-matrix-ink">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-matrix-paper text-[11px] font-bold text-matrix-muted">
+                {index + 1}
+              </span>
+              <span>{reminder}</span>
+            </li>
+          ))}
+        </ol>
       </Card>
 
-      <Card>
-        <SectionHeader
-          title="Investment Health Score"
-          description="替代每天变化很小的资产占比图，用健康度判断组合是否偏离个人原则。"
-          action={<ShieldCheck className="h-4 w-4 text-matrix-green" aria-hidden />}
-        />
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <div className="text-4xl font-bold leading-none text-matrix-ink">{summary.healthScore}</div>
-            <div className="mt-1 text-sm text-matrix-muted">/ 100</div>
-          </div>
-          <div className="text-right text-sm text-matrix-muted">
-            组合收益率
-            <div className={`mt-1 text-lg font-bold ${toneByValue(summary.returnRatePct)}`}>
-              {formatPercent(summary.returnRatePct)}
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 space-y-2">
-          {summary.assetHealth.map((item) => (
-            <div key={item.assetType} className="flex items-start justify-between gap-3 rounded-lg bg-matrix-paper p-3">
-              <div className="flex min-w-0 gap-2">
-                <CircleDot className="mt-0.5 h-4 w-4 shrink-0 text-matrix-muted" aria-hidden />
-                <div className="min-w-0">
-                  <div className="text-sm font-bold text-matrix-ink">{item.label}</div>
-                  <p className="mt-1 text-xs leading-relaxed text-matrix-muted">{item.reason}</p>
-                </div>
-              </div>
-              <Badge tone={item.tone}>{item.status}</Badge>
-            </div>
+      <section className="space-y-2">
+        <SectionHeader title="今日重点建议" description="AI 只做辅助判断，首页保留最需要关注的 1-3 条。" />
+        <div className="space-y-2">
+          {topRecommendations.map((item) => (
+            <CompactAiItem key={item.id} item={item} />
           ))}
         </div>
-      </Card>
+
+        {restRecommendations.length ? (
+          <details className="rounded-lg border border-matrix-line bg-white px-3 py-2">
+            <summary className="cursor-pointer list-none text-sm font-semibold text-matrix-ink">
+              查看全部 AI 分析
+              <span className="ml-2 text-xs font-normal text-matrix-muted">还有 {restRecommendations.length} 条</span>
+            </summary>
+            <div className="mt-2 space-y-2 border-t border-matrix-line pt-2">
+              {restRecommendations.map((item) => (
+                <CompactAiItem key={item.id} item={item} />
+              ))}
+            </div>
+          </details>
+        ) : null}
+      </section>
 
       <Disclaimer />
     </div>
