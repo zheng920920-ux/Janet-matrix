@@ -21,8 +21,8 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-md bg-matrix-paper">
-      <header className="sticky top-0 z-30 border-b border-matrix-line bg-matrix-paper/95 px-4 py-3 backdrop-blur">
+    <div className="mx-auto min-h-screen w-full max-w-md bg-matrix-paper lg:max-w-none">
+      <header className="sticky top-0 z-30 border-b border-matrix-line bg-matrix-paper/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-matrix-ink text-white">
@@ -43,9 +43,9 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="safe-bottom px-4 py-4">{children}</main>
+      <main className="safe-bottom px-4 py-4 lg:p-0">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-matrix-line bg-white/95 px-3 pb-[calc(8px+env(safe-area-inset-bottom))] pt-2 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-matrix-line bg-white/95 px-3 pb-[calc(8px+env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden">
         <div className="grid grid-cols-4 gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
