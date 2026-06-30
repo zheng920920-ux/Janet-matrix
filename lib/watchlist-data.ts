@@ -1,101 +1,39 @@
-export const watchlistItems = [
-  {
-    fundName: "南方纳斯达克100指数(QDII)A",
-    fundCode: "160213",
-    theme: "纳指100/QDII",
-    dayChangePct: 1.31,
-    relatedTheme: "纳指100",
-    isHeld: true,
-    note: "已持有，继续观察 T+2、费率和跟踪误差。",
-    detailHref: "/funds/160213",
-  },
-  {
-    fundName: "广发纳斯达克100ETF联接(QDII)A",
-    fundCode: "270042",
-    theme: "纳指100/QDII",
-    dayChangePct: 1.36,
-    relatedTheme: "纳指100",
-    isHeld: false,
-    note: "同板块候选，观察规模、费率和限购情况。",
-    detailHref: "/funds/160213/comparison",
-  },
-  {
-    fundName: "华夏国证半导体芯片ETF联接A",
-    fundCode: "012969",
-    theme: "半导体",
-    dayChangePct: 2.18,
-    relatedTheme: "半导体",
-    isHeld: false,
-    note: "半导体观察池，后续和当前持仓横向比较。",
-    detailHref: "/funds/007300/comparison",
-  },
-  {
-    fundName: "大成中证红利指数A",
-    fundCode: "090010",
-    theme: "红利",
-    dayChangePct: 0.74,
-    relatedTheme: "红利",
-    isHeld: false,
-    note: "红利板块候选，关注长期回撤和费率差异。",
-    detailHref: "/funds/100032/comparison",
-  },
-];
+export interface WatchlistItem {
+  name: string;
+  code: string;
+  theme: string;
+  changePct: number;
+  isHeld: boolean;
+  addedAt: string;
+  note: string;
+}
 
-export const sectorOverviews = [
+export const watchlistItems: WatchlistItem[] = [
   {
-    name: "CPO",
-    theme: "AI",
-    dayChangePct: 5.43,
-    risingDays: 1,
-    fundCount: 103,
-    hasHolding: false,
+    name: "广发纳斯达克100ETF联接(QDII)A",
+    code: "270042",
+    theme: "纳指100/QDII",
+    changePct: 1.36,
+    isHeld: false,
+    addedAt: "2026-06-21",
+    note: "关注费率和跟踪误差，和当前纳指持仓做长期对照。",
   },
   {
-    name: "PCB",
+    name: "华夏国证半导体芯片ETF联接A",
+    code: "012969",
     theme: "半导体",
-    dayChangePct: 5.25,
-    risingDays: 1,
-    fundCount: 13,
-    hasHolding: true,
+    changePct: 2.18,
+    isHeld: false,
+    addedAt: "2026-06-24",
+    note: "半导体板块观察，先记录波动和持有理由，不急着操作。",
   },
   {
-    name: "通信",
-    theme: "AI",
-    dayChangePct: 5.1,
-    risingDays: 1,
-    fundCount: 28,
-    hasHolding: false,
-  },
-  {
-    name: "人工智能",
-    theme: "AI",
-    dayChangePct: 4.86,
-    risingDays: 2,
-    fundCount: 29,
-    hasHolding: false,
-  },
-  {
-    name: "机器人",
-    theme: "AI",
-    dayChangePct: 4.81,
-    risingDays: 1,
-    fundCount: 40,
-    hasHolding: false,
-  },
-  {
-    name: "半导体",
-    theme: "半导体",
-    dayChangePct: 2.16,
-    risingDays: 1,
-    fundCount: 86,
-    hasHolding: true,
-  },
-  {
-    name: "医药",
-    theme: "医药",
-    dayChangePct: -0.52,
-    risingDays: 0,
-    fundCount: 71,
-    hasHolding: true,
+    name: "大成中证红利指数A",
+    code: "090010",
+    theme: "红利",
+    changePct: 0.74,
+    isHeld: false,
+    addedAt: "2026-06-18",
+    note: "用于红利方向备选，重点看回撤和分红稳定性。",
   },
 ];
