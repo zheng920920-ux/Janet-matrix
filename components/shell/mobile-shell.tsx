@@ -13,12 +13,14 @@ import {
   LineChart,
   Settings,
   Sparkles,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "首页", icon: Home },
-  { href: "/portfolio", label: "持仓", icon: Landmark },
+  { href: "/funds", label: "基金", icon: BarChart3 },
+  { href: "/watchlist", label: "自选", icon: Star },
   { href: "/qdii", label: "QDII", icon: CircleDollarSign },
   { href: "/stocks", label: "股票", icon: LineChart },
 ];
@@ -26,6 +28,7 @@ const navItems = [
 const desktopNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/funds", label: "Fund", icon: BarChart3 },
+  { href: "/watchlist", label: "Watchlist", icon: Star },
   { href: "/qdii", label: "QDII专区", icon: CircleDollarSign },
   { href: "/stocks", label: "Stock", icon: LineChart },
   { href: "/journal", label: "Journal", icon: BookOpen },
@@ -35,12 +38,6 @@ const desktopNavItems = [
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname.startsWith(href);
-}
-
-function isDesktopActive(pathname: string, href: string, match?: string) {
-  if (match && pathname.startsWith(match)) return true;
-  if (href.startsWith("#")) return false;
-  return isActive(pathname, href);
 }
 
 export function MobileShell({ children }: { children: React.ReactNode }) {
@@ -58,26 +55,19 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
           <nav className="mt-8 space-y-1">
             {desktopNavItems.map((item) => {
               const Icon = item.icon;
-              const active = isDesktopActive(pathname, item.href);
-              const content = (
-                <span
-                  className={cn(
-                    "flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
-                    active ? "bg-gray-100 text-matrix-ink" : "text-matrix-muted hover:bg-gray-50 hover:text-matrix-ink",
-                  )}
-                >
-                  <Icon className="h-4 w-4 text-current" strokeWidth={1.8} aria-hidden />
-                  {item.label}
-                </span>
-              );
+              const active = isActive(pathname, item.href);
 
-              return item.href.startsWith("#") ? (
-                <a key={item.label} href={item.href}>
-                  {content}
-                </a>
-              ) : (
-                <Link key={item.label} href={item.href}>
-                  {content}
+              return (
+                <Link key={item.href} href={item.href}>
+                  <span
+                    className={cn(
+                      "flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+                      active ? "bg-gray-100 text-matrix-ink" : "text-matrix-muted hover:bg-gray-50 hover:text-matrix-ink",
+                    )}
+                  >
+                    <Icon className="h-4 w-4 text-current" strokeWidth={1.8} aria-hidden />
+                    {item.label}
+                  </span>
                 </Link>
               );
             })}
@@ -88,7 +78,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
               <FileClock className="h-4 w-4" strokeWidth={1.8} aria-hidden />
               <span>Mock Data</span>
             </div>
-            <div className="mt-1">V3.1 · Updated 2026-06-29</div>
+            <div className="mt-1">V3.2 · Updated 2026-06-29</div>
           </div>
         </div>
       </aside>
@@ -100,7 +90,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
               <Sparkles className="h-4 w-4" aria-hidden />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-bold leading-tight text-matrix-ink">AI Matrix</span>
+              <span className="block text-sm font-semibold leading-tight text-matrix-ink">Janet Matrix</span>
               <span className="block text-xs text-matrix-muted">个人投资管理</span>
             </span>
           </Link>
@@ -108,7 +98,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
             href="/portfolio"
             className="inline-flex h-9 items-center gap-2 rounded-md border border-matrix-line bg-white px-3 text-xs font-semibold text-matrix-ink"
           >
-            <BarChart3 className="h-4 w-4" aria-hidden />
+            <Landmark className="h-4 w-4" aria-hidden />
             资产
           </Link>
         </div>
@@ -119,7 +109,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-matrix-line bg-white/95 px-3 pb-[calc(8px+env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden">
-        <div className="grid grid-cols-4 gap-1">
+        <div className="grid grid-cols-5 gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(pathname, item.href);
@@ -128,7 +118,7 @@ export function MobileShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex h-12 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-semibold",
+                  "flex h-12 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium",
                   active ? "bg-matrix-ink text-white" : "text-matrix-muted active:bg-matrix-paper",
                 )}
               >

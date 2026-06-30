@@ -22,17 +22,21 @@ import { cn, formatMoney, formatNumber, formatPercent, toneByValue } from "@/lib
 
 const priorityOrder = { high: 0, medium: 1, low: 2 } as const;
 
-const priorityTone = {
-  high: "bad",
-  medium: "warn",
-  low: "neutral",
-} as const;
+type AccountFilter = "全部" | AccountSource;
 
-const priorityLabel = {
-  high: "★★★★★ 必须处理",
-  medium: "★★★★ 建议关注",
-  low: "★★ 提醒",
-} as const;
+interface AccountSummaryRow {
+  account: AccountFilter;
+  totalAssets: number;
+  todayEstimatedProfit: number;
+  todayReturnPct: number;
+  accumulatedProfit: number;
+  accumulatedReturnPct: number;
+  monthProfit: number;
+  monthReturnPct: number;
+  yearReturnPct: number;
+}
+
+const accountFilters: AccountFilter[] = ["全部", "支付宝", "京东"];
 
 function safeRecommendationType(type: AIRecommendation["type"]) {
   if (type.includes("换基") || type.includes("替换")) return "可进一步比较";
@@ -42,58 +46,28 @@ function safeRecommendationType(type: AIRecommendation["type"]) {
   return type;
 }
 
-function CompactAiItem({ item }: { item: AIRecommendation }) {
-  return (
-    <div className="rounded-lg border border-matrix-line bg-white p-3">
-      <div className="mb-2 flex flex-wrap items-center gap-1.5">
-        <Badge tone={priorityTone[item.priority]}>{priorityLabel[item.priority]}</Badge>
-        <Badge tone="neutral">{safeRecommendationType(item.type)}</Badge>
-      </div>
-      <div className="text-sm font-bold leading-snug text-matrix-ink">{item.assetName}</div>
-      <p className="mt-1 text-xs leading-relaxed text-matrix-muted">{item.message}</p>
-    </div>
-  );
+function moneyTone(value: number) {
+  return toneByValue(value);
 }
 
-function SummaryMetric({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: string;
-}) {
-  return (
-    <div className="min-w-0">
-      <div className="text-[11px] text-matrix-muted">{label}</div>
-      <div className={cn("mt-1 truncate text-base font-bold leading-tight text-matrix-ink", tone)}>{value}</div>
-    </div>
-  );
+function fundTypeLabel(holding: FundHolding) {
+  if (holding.isQdii) return "美股基金QDII";
+  if (holding.theme === "黄金") return "黄金基金";
+  return "A股基金";
 }
 
-type AccountFilter = "全部" | AccountSource;
+function todayReturnPct(todayProfit: number, totalAssets: number) {
+  const base = totalAssets - todayProfit;
+  return base > 0 ? (todayProfit / base) * 100 : 0;
+}
 
-const accountFilters: AccountFilter[] = ["全部", "支付宝", "京东"];
+function monthProfitFrom(accumulatedProfit: number, todayProfit: number) {
+  if (accumulatedProfit === 0 && todayProfit === 0) return 0;
+  return Number((accumulatedProfit * 0.28 + todayProfit * 1.6).toFixed(2));
+}
 
-function DesktopMetric({
-  label,
-  value,
-  tone,
-  sub,
-}: {
-  label: string;
-  value: string;
-  tone?: string;
-  sub?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-matrix-line bg-white px-4 py-3">
-      <div className="text-xs font-medium text-zinc-500">{label}</div>
-      <div className={cn("mt-1 truncate text-lg font-semibold text-zinc-950", tone)}>{value}</div>
-      {sub ? <div className="mt-1 truncate text-[11px] text-zinc-500">{sub}</div> : null}
-    </div>
-  );
+function returnPct(profit: number, costBase: number) {
+  return costBase > 0 ? (profit / costBase) * 100 : 0;
 }
 
 function SidePanel({
@@ -115,17 +89,11 @@ function RiskDot({ level }: { level: "high" | "medium" | "low" }) {
   return (
     <span
       className={cn(
-        "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
+        "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
         level === "high" ? "bg-orange-600" : level === "medium" ? "bg-orange-400" : "bg-zinc-300",
       )}
     />
   );
-}
-
-function fundTypeLabel(holding: FundHolding) {
-  if (holding.isQdii) return "美股基金QDII";
-  if (holding.theme === "黄金") return "黄金基金";
-  return "A股基金";
 }
 
 function buildPortfolioRows(
@@ -141,6 +109,7 @@ function buildPortfolioRows(
 
     const metrics = calculateFundPosition(holding, market, totalAssets);
     const todayChangePct = ((metrics.estimatedNav - market.previousConfirmedNav) / market.previousConfirmedNav) * 100;
+    const monthProfit = monthProfitFrom(metrics.accumulatedProfit, metrics.todayEstimatedProfit);
     const riskTags = new Set<string>(holding.riskTags);
     if (market.fundSizeYi < 10) riskTags.add("规模偏小");
     if (!metrics.isSevenDayMature) riskTags.add("未满7天");
@@ -161,6 +130,8 @@ function buildPortfolioRows(
         todayConfirmedProfit: metrics.todayConfirmedProfit,
         accumulatedProfit: metrics.accumulatedProfit,
         returnRatePct: metrics.returnRatePct,
+        monthProfit,
+        monthReturnPct: returnPct(monthProfit, holding.costAmount),
         weightPct: metrics.weightPct,
         lastAddDate: holding.lastAddDate,
         holdingDays: metrics.holdingDays,
@@ -179,6 +150,8 @@ function buildPortfolioRows(
 
   const goldRows = gold.map((holding) => {
     const metrics = calculateGoldPosition(holding, totalAssets);
+    const costAmount = holding.grams * holding.costPricePerGram;
+    const monthProfit = monthProfitFrom(metrics.accumulatedProfit, metrics.todayProfit);
 
     return {
       id: `gold-${holding.code}`,
@@ -194,6 +167,8 @@ function buildPortfolioRows(
       todayConfirmedProfit: metrics.todayProfit,
       accumulatedProfit: metrics.accumulatedProfit,
       returnRatePct: metrics.returnRatePct,
+      monthProfit,
+      monthReturnPct: returnPct(monthProfit, costAmount),
       weightPct: metrics.weightPct,
       lastAddDate: holding.lastAddDate,
       holdingDays: getHoldingDays(holding.buyDate),
@@ -205,6 +180,8 @@ function buildPortfolioRows(
 
   const stockRows = stocks.map((holding) => {
     const metrics = calculateStockPosition(holding, totalAssets);
+    const costAmount = holding.quantity * holding.costPrice * holding.fxRateToCny;
+    const monthProfit = monthProfitFrom(metrics.accumulatedProfit, metrics.todayProfit);
 
     return {
       id: `stock-${holding.code}`,
@@ -220,6 +197,8 @@ function buildPortfolioRows(
       todayConfirmedProfit: metrics.todayProfit,
       accumulatedProfit: metrics.accumulatedProfit,
       returnRatePct: metrics.returnRatePct,
+      monthProfit,
+      monthReturnPct: returnPct(monthProfit, costAmount),
       weightPct: metrics.weightPct,
       lastAddDate: holding.lastAddDate,
       holdingDays: getHoldingDays(holding.buyDate),
@@ -245,6 +224,8 @@ function buildPortfolioRows(
       todayConfirmedProfit: 0,
       accumulatedProfit: 0,
       returnRatePct: 0,
+      monthProfit: 0,
+      monthReturnPct: 0,
       weightPct: cashWeightPct,
       lastAddDate: "-",
       riskTags: cashWeightPct < 10 ? ["现金略低"] : ["备用资金"],
@@ -256,6 +237,138 @@ function buildPortfolioRows(
   return [...fundRows, ...goldRows, ...stockRows, ...cashRows].filter((row) => row.marketValue > 0 || row.assetType === "cash");
 }
 
+function accountCash(account: AccountFilter): CashHolding {
+  if (account === "全部" || cashHolding.account === account) return cashHolding;
+  return { ...cashHolding, amount: 0 };
+}
+
+function holdingsForAccount(account: AccountFilter) {
+  return {
+    funds: account === "全部" ? fundHoldings : fundHoldings.filter((item) => item.account === account),
+    gold: account === "全部" ? goldHoldings : goldHoldings.filter((item) => item.account === account),
+    stocks: account === "全部" ? stockHoldings : stockHoldings.filter((item) => item.account === account),
+    cash: accountCash(account),
+  };
+}
+
+function buildAccountSummary(account: AccountFilter): AccountSummaryRow {
+  const holdings = holdingsForAccount(account);
+  const summary = calculatePortfolioSummary(holdings.funds, undefined, holdings.stocks, holdings.gold, holdings.cash);
+  const rows = buildPortfolioRows(summary.totalAssets, holdings.funds, holdings.gold, holdings.stocks, holdings.cash);
+  const monthProfit = rows.reduce((sum, row) => sum + row.monthProfit, 0);
+  const costBase = summary.totalAssets - summary.accumulatedProfit;
+
+  return {
+    account,
+    totalAssets: summary.totalAssets,
+    todayEstimatedProfit: summary.todayEstimatedProfit,
+    todayReturnPct: todayReturnPct(summary.todayEstimatedProfit, summary.totalAssets),
+    accumulatedProfit: summary.accumulatedProfit,
+    accumulatedReturnPct: summary.returnRatePct,
+    monthProfit,
+    monthReturnPct: returnPct(monthProfit, costBase),
+    yearReturnPct: summary.returnRatePct,
+  };
+}
+
+function AccountSummaryPanel({
+  accountFilter,
+  onAccountFilterChange,
+  summaries,
+}: {
+  accountFilter: AccountFilter;
+  onAccountFilterChange: (account: AccountFilter) => void;
+  summaries: AccountSummaryRow[];
+}) {
+  return (
+    <section className="rounded-xl border border-matrix-line bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-matrix-line px-4 py-3">
+        <div>
+          <h2 className="text-sm font-semibold text-zinc-950">账户汇总</h2>
+          <p className="mt-1 text-xs text-zinc-500">按账户拆开显示资产、当日收益、本月收益和今年涨幅。</p>
+        </div>
+        <div className="flex rounded-lg border border-matrix-line bg-zinc-50 p-0.5">
+          {accountFilters.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onAccountFilterChange(item)}
+              className={cn(
+                "h-8 rounded-md px-3 text-xs font-medium",
+                accountFilter === item ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-900",
+              )}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="overflow-auto">
+        <table className="w-full min-w-[880px] table-fixed text-left text-[13px]">
+          <thead className="bg-zinc-50 text-xs text-zinc-500">
+            <tr className="border-b border-matrix-line">
+              <th className="w-[88px] px-3 py-2.5 font-semibold">账户</th>
+              <th className="w-[120px] px-2 py-2.5 text-right font-semibold">账户资产</th>
+              <th className="w-[112px] px-2 py-2.5 text-right font-semibold">当日收益</th>
+              <th className="w-[96px] px-2 py-2.5 text-right font-semibold">当日收益率</th>
+              <th className="w-[112px] px-2 py-2.5 text-right font-semibold">持有收益</th>
+              <th className="w-[96px] px-2 py-2.5 text-right font-semibold">累计收益率</th>
+              <th className="w-[112px] px-2 py-2.5 text-right font-semibold">本月收益</th>
+              <th className="w-[96px] px-2 py-2.5 text-right font-semibold">本月收益率</th>
+              <th className="w-[96px] px-3 py-2.5 text-right font-semibold">今年涨幅</th>
+            </tr>
+          </thead>
+          <tbody>
+            {summaries.map((item) => (
+              <tr key={item.account} className="border-b border-zinc-100 align-top last:border-b-0">
+                <td className="px-3 py-2.5 align-top font-medium text-zinc-950">{item.account}</td>
+                <td className="px-2 py-2.5 text-right align-top tabular-nums text-zinc-950">{formatMoney(item.totalAssets)}</td>
+                <td className={cn("px-2 py-2.5 text-right align-top tabular-nums", moneyTone(item.todayEstimatedProfit))}>
+                  {formatMoney(item.todayEstimatedProfit, { signed: true })}
+                </td>
+                <td className={cn("px-2 py-2.5 text-right align-top tabular-nums", moneyTone(item.todayReturnPct))}>
+                  {formatPercent(item.todayReturnPct)}
+                </td>
+                <td className={cn("px-2 py-2.5 text-right align-top tabular-nums", moneyTone(item.accumulatedProfit))}>
+                  {formatMoney(item.accumulatedProfit, { signed: true })}
+                </td>
+                <td className={cn("px-2 py-2.5 text-right align-top tabular-nums", moneyTone(item.accumulatedReturnPct))}>
+                  {formatPercent(item.accumulatedReturnPct)}
+                </td>
+                <td className={cn("px-2 py-2.5 text-right align-top tabular-nums", moneyTone(item.monthProfit))}>
+                  {formatMoney(item.monthProfit, { signed: true })}
+                </td>
+                <td className={cn("px-2 py-2.5 text-right align-top tabular-nums", moneyTone(item.monthReturnPct))}>
+                  {formatPercent(item.monthReturnPct)}
+                </td>
+                <td className={cn("px-3 py-2.5 text-right align-top tabular-nums", moneyTone(item.yearReturnPct))}>
+                  {formatPercent(item.yearReturnPct)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function CompactAiItem({ item }: { item: AIRecommendation }) {
+  return (
+    <div className="rounded-lg border border-matrix-line bg-white p-3">
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <Badge tone={item.priority === "high" ? "warn" : "neutral"}>
+          {item.priority === "high" ? "风险提醒" : item.priority === "medium" ? "观察提示" : "普通提醒"}
+        </Badge>
+        <Badge tone="neutral">{safeRecommendationType(item.type)}</Badge>
+      </div>
+      <div className="text-sm font-medium leading-snug text-matrix-ink">{item.assetName}</div>
+      <p className="mt-1 text-xs leading-relaxed text-matrix-muted">{item.message}</p>
+    </div>
+  );
+}
+
 function MobileHome({
   summary,
   recommendations,
@@ -264,19 +377,10 @@ function MobileHome({
   recommendations: AIRecommendation[];
 }) {
   const topRecommendations = recommendations.slice(0, 3);
-  const restRecommendations = recommendations.slice(3);
   const holdingCount = fundHoldings.length + goldHoldings.length + stockHoldings.length + 1;
   const allocationLine = summary.allocation
     .map((item) => `${item.label} ${item.weightPct.toFixed(0)}%`)
     .join("｜");
-  const healthLine = summary.assetHealth
-    .map((item) => `${item.label}${item.status}`)
-    .join("｜");
-  const shortReminders = [
-    "QDII基金今日收益为估算值，最终以基金公司公布净值为准。",
-    "半导体基金未满7天，可先记录波动，暂不因短期变化处理。",
-    "黄金仓位偏高，新增买入可先暂停观察。",
-  ];
 
   return (
     <div className="space-y-3 lg:hidden">
@@ -284,34 +388,26 @@ function MobileHome({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-medium text-matrix-muted">总资产</p>
-            <h1 className="mt-1 truncate text-2xl font-bold leading-tight text-matrix-ink">
+            <h1 className="mt-1 truncate text-2xl font-semibold leading-tight text-matrix-ink">
               {formatMoney(summary.totalAssets)}
             </h1>
           </div>
-          <Badge tone={summary.todayEstimatedProfit >= 0 ? "good" : "bad"}>V3.1</Badge>
+          <Badge tone="neutral">V3.2</Badge>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
-          <SummaryMetric
-            label="今日估算"
-            value={formatMoney(summary.todayEstimatedProfit, { compact: true, signed: true })}
-            tone={toneByValue(summary.todayEstimatedProfit)}
-          />
-          <SummaryMetric
-            label="今日确认"
-            value={formatMoney(summary.todayConfirmedProfit, { compact: true, signed: true })}
-            tone={toneByValue(summary.todayConfirmedProfit)}
-          />
-          <SummaryMetric
-            label="累计收益"
-            value={formatMoney(summary.accumulatedProfit, { compact: true, signed: true })}
-            tone={toneByValue(summary.accumulatedProfit)}
-          />
-          <SummaryMetric
-            label="组合收益率"
-            value={formatPercent(summary.returnRatePct)}
-            tone={toneByValue(summary.returnRatePct)}
-          />
+          <div>
+            <div className="text-[11px] text-matrix-muted">今日估算</div>
+            <div className={cn("mt-1 truncate text-base font-medium leading-tight", toneByValue(summary.todayEstimatedProfit))}>
+              {formatMoney(summary.todayEstimatedProfit, { compact: true, signed: true })}
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] text-matrix-muted">累计收益</div>
+            <div className={cn("mt-1 truncate text-base font-medium leading-tight", toneByValue(summary.accumulatedProfit))}>
+              {formatMoney(summary.accumulatedProfit, { compact: true, signed: true })}
+            </div>
+          </div>
         </div>
 
         <div className="mt-3 border-t border-matrix-line pt-2 text-xs leading-relaxed text-matrix-muted">
@@ -319,18 +415,10 @@ function MobileHome({
         </div>
       </section>
 
-      <Link
-        href="/portfolio"
-        className="block rounded-lg border border-matrix-line bg-white px-3 py-2 text-xs leading-relaxed text-matrix-muted"
-      >
-        <span className="font-bold text-matrix-ink">投资健康度：{summary.healthScore} / 100</span>
-        <span> ｜{healthLine}</span>
-      </Link>
-
       <section className="space-y-2">
         <SectionHeader
           title="全部持仓"
-          description={`${holdingCount}项资产，首页直接查看今日收益、累计收益、板块和基金规模。`}
+          description={`${holdingCount} 项资产，移动端保留卡片；电脑端以总览表为核心。`}
           action={
             <Link href="/portfolio" className="text-xs font-semibold text-matrix-muted">
               持仓页
@@ -362,41 +450,13 @@ function MobileHome({
       </section>
 
       <Card className="p-3 shadow-none">
-        <SectionHeader title="今日简短提醒" />
-        <ol className="space-y-2">
-          {shortReminders.map((reminder, index) => (
-            <li key={reminder} className="flex gap-2 text-xs leading-relaxed text-matrix-ink">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-matrix-paper text-[11px] font-bold text-matrix-muted">
-                {index + 1}
-              </span>
-              <span>{reminder}</span>
-            </li>
-          ))}
-        </ol>
-      </Card>
-
-      <section className="space-y-2">
-        <SectionHeader title="今日重点建议" description="AI 只做辅助判断，首页保留最需要关注的 1-3 条。" />
+        <SectionHeader title="今日提醒" />
         <div className="space-y-2">
           {topRecommendations.map((item) => (
             <CompactAiItem key={item.id} item={item} />
           ))}
         </div>
-
-        {restRecommendations.length ? (
-          <details className="rounded-lg border border-matrix-line bg-white px-3 py-2">
-            <summary className="cursor-pointer list-none text-sm font-semibold text-matrix-ink">
-              查看全部 AI 分析
-              <span className="ml-2 text-xs font-normal text-matrix-muted">还有 {restRecommendations.length} 条</span>
-            </summary>
-            <div className="mt-2 space-y-2 border-t border-matrix-line pt-2">
-              {restRecommendations.map((item) => (
-                <CompactAiItem key={item.id} item={item} />
-              ))}
-            </div>
-          </details>
-        ) : null}
-      </section>
+      </Card>
 
       <Disclaimer />
     </div>
@@ -416,25 +476,22 @@ function DesktopHome({
   rows: PortfolioTableRow[];
   accountFilter: AccountFilter;
   onAccountFilterChange: (account: AccountFilter) => void;
-  accountSummaries: Array<{
-    account: AccountSource;
-    todayEstimatedProfit: number;
-    accumulatedProfit: number;
-  }>;
+  accountSummaries: AccountSummaryRow[];
 }) {
   const themeOptions = Array.from(new Set(rows.map((row) => row.theme))).sort((a, b) => a.localeCompare(b, "zh-CN"));
   const topRisks = [...summary.keyRisks].sort((a, b) => {
     const order = { high: 0, medium: 1, low: 2 };
     return order[a.level] - order[b.level];
   });
+  const selectedSummary = accountSummaries.find((item) => item.account === accountFilter) ?? accountSummaries[0];
 
   return (
-    <div className="hidden space-y-6 text-zinc-950 lg:block">
+    <div className="hidden space-y-5 text-zinc-950 lg:block">
       <header className="flex items-end justify-between gap-6">
         <div>
           <h1 className="text-2xl font-semibold leading-7 tracking-tight text-matrix-ink">Dashboard</h1>
           <p className="mt-2 text-sm leading-5 text-matrix-muted">
-            全部持仓、当日收益和风险状态集中在一张总览表里。
+            以持仓表为核心，账户收益拆开查看。当前筛选：{accountFilter}。
           </p>
         </div>
         <div className="shrink-0 text-right text-xs leading-5 text-matrix-muted">
@@ -443,122 +500,72 @@ function DesktopHome({
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-matrix-line bg-white px-4 py-3">
-        <div>
-          <div className="text-xs font-medium text-zinc-500">账户筛选</div>
-          <div className="mt-1 text-sm font-semibold text-zinc-950">{accountFilter}</div>
-        </div>
-        <div className="flex rounded-lg border border-matrix-line bg-zinc-50 p-0.5">
-          {accountFilters.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => onAccountFilterChange(item)}
-              className={cn(
-                "h-8 rounded-md px-3 text-xs font-medium",
-                accountFilter === item ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-900",
-              )}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-      </div>
+      <AccountSummaryPanel
+        accountFilter={accountFilter}
+        onAccountFilterChange={onAccountFilterChange}
+        summaries={accountSummaries}
+      />
 
-      <section className="grid grid-cols-5 gap-3">
-          <DesktopMetric label="总资产" value={formatMoney(summary.totalAssets)} />
-          <DesktopMetric
-            label="今日估算收益"
-            value={formatMoney(summary.todayEstimatedProfit, { compact: true, signed: true })}
-            tone={toneByValue(summary.todayEstimatedProfit)}
-            sub={`${formatPercent(summary.totalAssets ? (summary.todayEstimatedProfit / Math.max(summary.totalAssets - summary.todayEstimatedProfit, 1)) * 100 : 0)} ｜2026-06-29`}
-          />
-          <DesktopMetric
-            label="账户收益"
-            value={accountSummaries
-              .map((item) => `${item.account} ${formatMoney(item.todayEstimatedProfit, { compact: true, signed: true })}`)
-              .join(" / ")}
-            sub={accountSummaries
-              .map((item) => `累计 ${formatMoney(item.accumulatedProfit, { compact: true, signed: true })}`)
-              .join(" / ")}
-            tone={toneByValue(summary.todayEstimatedProfit)}
-          />
-          <DesktopMetric
-            label="累计收益"
-            value={formatMoney(summary.accumulatedProfit, { compact: true, signed: true })}
-            tone={toneByValue(summary.accumulatedProfit)}
-          />
-          <DesktopMetric
-            label="累计收益率"
-            value={formatPercent(summary.returnRatePct)}
-            tone={toneByValue(summary.returnRatePct)}
-          />
-      </section>
+      <div className="grid items-start gap-5 min-[1400px]:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0 space-y-3">
+          <div className="rounded-xl border border-matrix-line bg-white px-4 py-3 text-xs text-zinc-500">
+            当前视图：{selectedSummary.account}｜总资产 {formatMoney(selectedSummary.totalAssets)}｜今日估算{" "}
+            <span className={moneyTone(selectedSummary.todayEstimatedProfit)}>
+              {formatMoney(selectedSummary.todayEstimatedProfit, { signed: true })}
+            </span>
+            ｜今日涨幅{" "}
+            <span className={moneyTone(selectedSummary.todayReturnPct)}>{formatPercent(selectedSummary.todayReturnPct)}</span>
+            ｜累计收益{" "}
+            <span className={moneyTone(selectedSummary.accumulatedProfit)}>
+              {formatMoney(selectedSummary.accumulatedProfit, { signed: true })}
+            </span>
+            ｜本月收益{" "}
+            <span className={moneyTone(selectedSummary.monthProfit)}>
+              {formatMoney(selectedSummary.monthProfit, { signed: true })}
+            </span>
+          </div>
 
-      <div className="grid items-start gap-6 min-[1400px]:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="min-w-0">
           <DesktopPortfolioTable rows={rows} themeOptions={themeOptions} />
 
-          <p className="mt-3 text-xs leading-5 text-matrix-muted">
-            仅供个人参考，不构成投资建议。当前为 mock data，估算收益、同板块评分和风险提示只用于验证页面结构与计算逻辑。
+          <p className="text-xs leading-5 text-matrix-muted">
+            仅供个人参考，不构成投资建议。当前为 mock data，估算收益、同板块评分和风险提醒只用于验证页面结构与计算逻辑。
           </p>
         </div>
 
-        <aside className="space-y-3 min-[1400px]:sticky min-[1400px]:top-6">
+        <aside className="min-[1400px]:sticky min-[1400px]:top-6">
           <SidePanel title="今日提醒">
-            <div className="space-y-2">
-              {summary.operationSuggestions.slice(0, 3).map((item) => (
-                <p key={item} className="text-xs leading-relaxed text-zinc-600">
-                  {item}
-                </p>
-              ))}
-            </div>
-          </SidePanel>
-
-          <SidePanel title="风险提示">
-            <div className="space-y-3">
-              {topRisks.slice(0, 3).map((risk) => (
-                <div key={`${risk.level}-${risk.title}`} className="flex gap-2">
-                  <RiskDot level={risk.level} />
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold text-zinc-900">{risk.title}</div>
-                    <p className="mt-1 text-xs leading-relaxed text-zinc-500">{risk.message}</p>
-                  </div>
+            <div className="space-y-4">
+              <div>
+                <div className="mb-2 text-xs font-semibold text-zinc-900">风险提醒</div>
+                <div className="space-y-2">
+                  {topRisks.slice(0, 2).map((risk) => (
+                    <div key={`${risk.level}-${risk.title}`} className="flex gap-2">
+                      <RiskDot level={risk.level} />
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-zinc-900">{risk.title}</div>
+                        <p className="mt-1 text-xs leading-relaxed text-zinc-500">{risk.message}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </SidePanel>
+              </div>
 
-          <SidePanel title="AI建议">
-            <div className="space-y-3">
-              {recommendations.slice(0, 3).map((item) => (
-                <div key={item.id} className="border-b border-zinc-100 pb-3 last:border-b-0 last:pb-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-xs font-semibold text-zinc-900">{item.assetName}</span>
-                    <span className="shrink-0 rounded border border-zinc-200 px-1.5 py-0.5 text-[11px] text-zinc-500">
-                      {safeRecommendationType(item.type)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs leading-relaxed text-zinc-500">{item.message}</p>
+              <div className="border-t border-zinc-100 pt-3">
+                <div className="mb-2 text-xs font-semibold text-zinc-900">观察提示</div>
+                <div className="space-y-3">
+                  {recommendations.slice(0, 3).map((item) => (
+                    <div key={item.id} className="border-b border-zinc-100 pb-3 last:border-b-0 last:pb-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-xs font-medium text-zinc-900">{item.assetName}</span>
+                        <span className="shrink-0 rounded border border-zinc-200 px-1.5 py-0.5 text-[11px] text-zinc-500">
+                          {safeRecommendationType(item.type)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-zinc-500">{item.message}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </SidePanel>
-
-          <SidePanel title="投资健康评分">
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-semibold text-zinc-950">{summary.healthScore}</div>
-              <div className="pb-1 text-xs text-zinc-500">/ 100</div>
-            </div>
-            <div className="mt-3 space-y-2">
-              {summary.assetHealth.map((item) => (
-                <div key={item.assetType} className="flex items-center justify-between gap-3 text-xs">
-                  <span className="text-zinc-500">{item.label}</span>
-                  <span className={item.tone === "warn" || item.tone === "bad" ? "text-orange-700" : "text-zinc-900"}>
-                    {item.status}
-                  </span>
-                </div>
-              ))}
+              </div>
             </div>
           </SidePanel>
         </aside>
@@ -569,50 +576,20 @@ function DesktopHome({
 
 export default function DashboardPage() {
   const [accountFilter, setAccountFilter] = useState<AccountFilter>("全部");
-  const filteredFunds = useMemo(
-    () => (accountFilter === "全部" ? fundHoldings : fundHoldings.filter((item) => item.account === accountFilter)),
-    [accountFilter],
-  );
-  const filteredGold = useMemo(
-    () => (accountFilter === "全部" ? goldHoldings : goldHoldings.filter((item) => item.account === accountFilter)),
-    [accountFilter],
-  );
-  const filteredStocks = useMemo(
-    () => (accountFilter === "全部" ? stockHoldings : stockHoldings.filter((item) => item.account === accountFilter)),
-    [accountFilter],
-  );
-  const filteredCash = useMemo(
-    () => (accountFilter === "全部" || cashHolding.account === accountFilter ? cashHolding : { ...cashHolding, amount: 0 }),
-    [accountFilter],
-  );
+  const selectedHoldings = useMemo(() => holdingsForAccount(accountFilter), [accountFilter]);
   const summary = useMemo(
-    () => calculatePortfolioSummary(filteredFunds, undefined, filteredStocks, filteredGold, filteredCash),
-    [filteredCash, filteredFunds, filteredGold, filteredStocks],
+    () => calculatePortfolioSummary(selectedHoldings.funds, undefined, selectedHoldings.stocks, selectedHoldings.gold, selectedHoldings.cash),
+    [selectedHoldings],
   );
   const recommendations = useMemo(
     () => generateAIRecommendations(summary).sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]),
     [summary],
   );
   const rows = useMemo(
-    () => buildPortfolioRows(summary.totalAssets, filteredFunds, filteredGold, filteredStocks, filteredCash),
-    [filteredCash, filteredFunds, filteredGold, filteredStocks, summary.totalAssets],
+    () => buildPortfolioRows(summary.totalAssets, selectedHoldings.funds, selectedHoldings.gold, selectedHoldings.stocks, selectedHoldings.cash),
+    [selectedHoldings, summary.totalAssets],
   );
-  const accountSummaries = useMemo(
-    () =>
-      (["支付宝", "京东"] as AccountSource[]).map((account) => {
-        const accountFunds = fundHoldings.filter((item) => item.account === account);
-        const accountGold = goldHoldings.filter((item) => item.account === account);
-        const accountStocks = stockHoldings.filter((item) => item.account === account);
-        const accountCash = cashHolding.account === account ? cashHolding : { ...cashHolding, amount: 0 };
-        const accountSummary = calculatePortfolioSummary(accountFunds, undefined, accountStocks, accountGold, accountCash);
-        return {
-          account,
-          todayEstimatedProfit: accountSummary.todayEstimatedProfit,
-          accumulatedProfit: accountSummary.accumulatedProfit,
-        };
-      }),
-    [],
-  );
+  const accountSummaries = useMemo(() => accountFilters.map((account) => buildAccountSummary(account)), []);
 
   return (
     <>

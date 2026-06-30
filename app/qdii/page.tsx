@@ -18,7 +18,7 @@ export default function QdiiPage() {
   const qdiiFunds = fundHoldings.filter((fund) => fund.isQdii);
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-[1040px] space-y-4">
       <PageHeader
         title="QDII专区"
         description="美股基金估算净值、确认净值、汇率影响和T+2延迟拆开显示。"

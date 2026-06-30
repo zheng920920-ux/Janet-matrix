@@ -55,6 +55,12 @@ export default async function FundDetailPage({ params }: { params: Promise<{ cod
             >
               修改持仓 / 收益
             </Link>
+            <Link
+              href="/watchlist"
+              className="inline-flex h-7 items-center rounded-md border border-matrix-line bg-white px-2 text-xs font-semibold text-matrix-ink"
+            >
+              加入自选
+            </Link>
           </div>
         }
       />
